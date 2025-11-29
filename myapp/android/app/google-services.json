@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "609914419990",
+    "project_id": "iskaon-4c87c",
+    "storage_bucket": "iskaon-4c87c.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:609914419990:android:a053be7a05c503a51cae37",
+        "android_client_info": {
+          "package_name": "com.iskaon.pisay"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBfJ3PYUcvuiK6TOVSnC40h0yteLCsi8W0"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

@@ -1,21 +1,23 @@
 import 'package:flutter/material.dart';
-import 'screens/home_screen.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:provider/provider.dart';
+import 'package:myapp/models/app_user.dart';
+import 'package:myapp/services/auth.dart';
+import 'screens/wrapper.dart';
 
-void main() {
-  runApp(const MyApp());
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await Firebase.initializeApp();
+  runApp(MyApp());
 }
 
 class MyApp extends StatelessWidget {
-  const MyApp({super.key});
-
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Iskaon Food App',
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepOrange),
-      ),
-      home: const HomeScreen(),
+    return StreamProvider<AppUser?>.value(
+      value: AuthService().user,
+      initialData: null,
+      child: MaterialApp(title: 'Iskaon', home: Wrapper()),
     );
   }
 }

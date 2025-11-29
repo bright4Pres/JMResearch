@@ -1,29 +1,43 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'meal_screen.dart';
+import 'package:myapp/services/auth.dart';
 
 class HomeScreen extends StatefulWidget {
-  const HomeScreen({super.key});
+  HomeScreen({super.key});
+  final AuthService _auth = AuthService();
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
 class _HomeScreenState extends State<HomeScreen> {
+  User? currentUser;
+
+  @override
+  void initState() {
+    super.initState();
+    currentUser = FirebaseAuth.instance.currentUser;
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: const Color.fromARGB(255, 255, 236, 191),
       appBar: AppBar(
         toolbarHeight: 70,
         backgroundColor: Colors.white,
-        leading: Padding(
-          padding: const EdgeInsets.all(8.0),
-          child: GestureDetector(
-            onTap: () {
-              // Handle menu tap
-            },
-            child: CircleAvatar(
-              backgroundImage: AssetImage('assets/profile.jpg'),
-              radius: 20,
+        leading: Builder(
+          builder: (context) => Padding(
+            padding: const EdgeInsets.all(8.0),
+            child: GestureDetector(
+              onTap: () {
+                Scaffold.of(context).openDrawer();
+              },
+              child: CircleAvatar(
+                backgroundImage: AssetImage('assets/images/profile.jpg'),
+                radius: 20,
+              ),
             ),
           ),
         ),
@@ -55,11 +69,121 @@ class _HomeScreenState extends State<HomeScreen> {
           IconButton(
             icon: const Icon(Icons.notifications),
             color: Colors.blueGrey,
-            onPressed: () {
-              // Handle notification tap
-            },
+            onPressed: () {},
           ),
         ],
+      ),
+      drawer: Drawer(
+        child: Column(
+          children: [
+            Container(
+              height: MediaQuery.of(context).size.height * 0.20,
+              width: double.infinity,
+              color: Colors.deepOrange,
+              padding: const EdgeInsets.all(20),
+              child: SafeArea(
+                child: Row(
+                  children: [
+                    CircleAvatar(
+                      radius: 35,
+                      backgroundImage: AssetImage('assets/profile.jpg'),
+                    ),
+                    const SizedBox(width: 15),
+                    Expanded(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            currentUser?.displayName ?? 'User',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          const SizedBox(height: 5),
+                          Text(
+                            currentUser?.email ?? 'No email',
+                            style: TextStyle(
+                              color: Colors.white70,
+                              fontSize: 13,
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            Expanded(
+              child: Container(
+                color: Colors.orange[50],
+                child: ListView(
+                  padding: EdgeInsets.zero,
+                  children: [
+                    _buildDrawerItem(
+                      icon: Icons.person_outline,
+                      title: 'Edit Profile',
+                      onTap: () {
+                        Navigator.pop(context);
+                      },
+                    ),
+                    _buildDrawerItem(
+                      icon: Icons.history,
+                      title: 'Order History',
+                      onTap: () {
+                        Navigator.pop(context);
+                      },
+                    ),
+                    _buildDrawerItem(
+                      icon: Icons.location_on_outlined,
+                      title: 'Pickup Locations',
+                      onTap: () {
+                        Navigator.pop(context);
+                      },
+                    ),
+                    Divider(color: Colors.orange[200], thickness: 1),
+                    _buildDrawerItem(
+                      icon: Icons.admin_panel_settings_outlined,
+                      title: 'Staff Mode',
+                      onTap: () {
+                        Navigator.pop(context);
+                      },
+                    ),
+                    Divider(color: Colors.orange[200], thickness: 1),
+                    _buildDrawerItem(
+                      icon: Icons.settings_outlined,
+                      title: 'Settings',
+                      onTap: () {
+                        Navigator.pop(context);
+                      },
+                    ),
+                    _buildDrawerItem(
+                      icon: Icons.help_outline,
+                      title: 'Help & Support',
+                      onTap: () {
+                        Navigator.pop(context);
+                      },
+                    ),
+                    Divider(color: Colors.orange[200], thickness: 1),
+                    _buildDrawerItem(
+                      icon: Icons.logout,
+                      title: 'Sign Out',
+                      textColor: Colors.red[700],
+                      onTap: () {
+                        Navigator.pop(context);
+                        _showSignOutDialog(context);
+                      },
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
       body: Center(
         child: Column(
@@ -87,6 +211,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
                 child: Container(
                   decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(20),
                     image: DecorationImage(
                       image: AssetImage('assets/images/Meals.png'),
                       fit: BoxFit.cover,
@@ -118,7 +243,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       Positioned(
                         bottom: 10,
                         left: 20,
-                        child: Container(
+                        child: SizedBox(
                           width: 200,
                           height: 35,
                           child: Column(
@@ -164,6 +289,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
                 child: Container(
                   decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(20),
                     image: DecorationImage(
                       image: AssetImage('assets/images/Snacks.png'),
                       fit: BoxFit.cover,
@@ -195,7 +321,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       Positioned(
                         bottom: 10,
                         left: 20,
-                        child: Container(
+                        child: SizedBox(
                           width: 200,
                           height: 35,
                           child: Column(
@@ -228,6 +354,56 @@ class _HomeScreenState extends State<HomeScreen> {
           ],
         ),
       ),
+    );
+  }
+
+  // Helper method to build drawer items
+  Widget _buildDrawerItem({
+    required IconData icon,
+    required String title,
+    required VoidCallback onTap,
+    Color? textColor,
+  }) {
+    return ListTile(
+      leading: Icon(icon, color: textColor ?? Colors.deepOrange[700]),
+      title: Text(
+        title,
+        style: TextStyle(
+          fontSize: 16,
+          color: textColor ?? Colors.black87,
+          fontWeight: FontWeight.w500,
+        ),
+      ),
+      onTap: onTap,
+      hoverColor: Colors.orange[100],
+    );
+  }
+
+  // Sign out confirmation dialog
+  void _showSignOutDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Sign Out'),
+          content: const Text('Are you sure you want to sign out?'),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () async {
+                await widget._auth.signOut();
+                Navigator.of(context).pop();
+              },
+              child: Text('Sign Out', style: TextStyle(color: Colors.red[700])),
+            ),
+          ],
+        );
+      },
     );
   }
 }

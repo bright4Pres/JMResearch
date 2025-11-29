@@ -49,6 +49,7 @@ class _MealScreenState extends State<MealScreen> {
                 ),
                 child: Container(
                   decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(20),
                     image: DecorationImage(
                       image: AssetImage('assets/images/Meals.png'),
                       fit: BoxFit.cover,
@@ -61,7 +62,7 @@ class _MealScreenState extends State<MealScreen> {
                       Positioned(
                         bottom: 60,
                         left: 20,
-                        child: Container(
+                        child: SizedBox(
                           width: 240,
                           height: 80,
                           child: Column(
@@ -127,7 +128,7 @@ class _MealScreenState extends State<MealScreen> {
                       Positioned(
                         top: 100,
                         left: 220,
-                        child: Container(
+                        child: SizedBox(
                           width: 240,
                           height: 80,
                           child: Column(
@@ -180,6 +181,7 @@ class _MealScreenState extends State<MealScreen> {
                 ),
                 child: Container(
                   decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(20),
                     image: DecorationImage(
                       image: AssetImage('assets/images/Meals.png'),
                       fit: BoxFit.cover,
@@ -192,7 +194,7 @@ class _MealScreenState extends State<MealScreen> {
                       Positioned(
                         bottom: 60,
                         left: 20,
-                        child: Container(
+                        child: SizedBox(
                           width: 240,
                           height: 80,
                           child: Column(
@@ -258,7 +260,7 @@ class _MealScreenState extends State<MealScreen> {
                       Positioned(
                         top: 100,
                         left: 220,
-                        child: Container(
+                        child: SizedBox(
                           width: 240,
                           height: 80,
                           child: Column(
