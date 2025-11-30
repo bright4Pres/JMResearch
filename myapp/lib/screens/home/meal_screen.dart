@@ -1,13 +1,8 @@
 import 'package:flutter/material.dart';
 
-class MealScreen extends StatefulWidget {
+class MealScreen extends StatelessWidget {
   const MealScreen({super.key});
 
-  @override
-  State<MealScreen> createState() => _MealScreenState();
-}
-
-class _MealScreenState extends State<MealScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -18,275 +13,174 @@ class _MealScreenState extends State<MealScreen> {
       ),
       body: Center(
         child: Column(
-          children: [
-            Container(
-              margin: const EdgeInsets.all(20),
-              child: const Text(
+          children: const [
+            SizedBox(height: 20),
+            Padding(
+              padding: EdgeInsets.all(20),
+              child: Text(
                 'Choose Your Kitchen',
                 style: TextStyle(fontSize: 24),
               ),
             ),
-            Container(
-              margin: const EdgeInsets.only(top: 20),
-              child: ElevatedButton(
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (context) => MealScreen()),
-                  );
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.transparent,
-                  padding: EdgeInsets.zero,
-                  textStyle: const TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                  ),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  minimumSize: const Size(330, 180),
-                ),
-                child: Container(
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(20),
-                    image: DecorationImage(
-                      image: AssetImage('assets/images/Meals.png'),
-                      fit: BoxFit.cover,
+            SizedBox(height: 8),
+            MealCard(
+              title: 'Red Plate',
+              subtitle:
+                  'Premium customizable meals with rice, viands, and sides',
+              badgeText: 'Campus Canteen',
+              badgeColor: Color.fromARGB(255, 255, 255, 35),
+              cornerTagText: 'Premium Kitchen',
+              cornerTagColor: Colors.red,
+              price: '₱120',
+              priceLabel: 'starting at',
+              image: 'assets/images/Meals.png',
+            ),
+            SizedBox(height: 20),
+            MealCard(
+              title: 'Silver Plate',
+              subtitle: 'Classic set meals with rice and main dish combos.',
+              badgeText: 'Best Value',
+              badgeColor: Colors.white,
+              cornerTagText: 'Premium Kitchen',
+              cornerTagColor: Colors.blueGrey,
+              price: '₱120',
+              priceLabel: 'starting at',
+              image: 'assets/images/Meals.png',
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class MealCard extends StatelessWidget {
+  final String title;
+  final String subtitle;
+  final String badgeText;
+  final Color badgeColor;
+  final String cornerTagText;
+  final Color cornerTagColor;
+  final String price;
+  final String priceLabel;
+  final String image;
+
+  const MealCard({
+    super.key,
+    required this.title,
+    required this.subtitle,
+    required this.badgeText,
+    required this.badgeColor,
+    required this.cornerTagText,
+    required this.cornerTagColor,
+    required this.price,
+    required this.priceLabel,
+    required this.image,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: () {
+        // TODO: navigate to detail or menu list for this kitchen
+      },
+      child: Container(
+        width: 330,
+        height: 180,
+        margin: const EdgeInsets.symmetric(horizontal: 0),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(20),
+          image: DecorationImage(image: AssetImage(image), fit: BoxFit.cover),
+        ),
+        child: Stack(
+          children: [
+            Positioned(
+              bottom: 60,
+              left: 20,
+              child: SizedBox(
+                width: 240,
+                height: 80,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 30,
+                      ),
                     ),
-                  ),
-                  width: 330,
-                  height: 180,
-                  child: Stack(
-                    children: [
-                      Positioned(
-                        bottom: 60,
-                        left: 20,
-                        child: SizedBox(
-                          width: 240,
-                          height: 80,
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                "Red Plate",
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 30,
-                                ),
-                              ),
-                              Text(
-                                "Premium customizable meals with rice, viands, and sides",
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 14,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                      Positioned(
-                        top: 135,
-                        left: 20,
-                        child: Container(
-                          width: 100,
-                          height: 25,
-                          decoration: BoxDecoration(
-                            color: const Color.fromARGB(255, 255, 255, 35),
-                            borderRadius: BorderRadius.circular(15),
-                          ),
-                          child: Text(
-                            "Campus Canteen",
-                            style: TextStyle(
-                              color: Colors.black,
-                              fontSize: 10.0,
-                            ),
-                          ),
-                        ),
-                      ),
-                      Positioned(
-                        top: 10,
-                        left: 220,
-                        child: Container(
-                          width: 100,
-                          height: 25,
-                          decoration: BoxDecoration(
-                            color: Colors.red,
-                            borderRadius: BorderRadius.circular(15),
-                          ),
-                          child: Text(
-                            "Premium Kitchen",
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 10.0,
-                            ),
-                          ),
-                        ),
-                      ),
-                      Positioned(
-                        top: 100,
-                        left: 220,
-                        child: SizedBox(
-                          width: 240,
-                          height: 80,
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                "₱120",
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 30,
-                                ),
-                              ),
-                              Text(
-                                "starting at",
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 15,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ],
+                    const SizedBox(height: 4),
+                    Text(
+                      subtitle,
+                      style: const TextStyle(color: Colors.white, fontSize: 14),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            Positioned(
+              top: 135,
+              left: 20,
+              child: Container(
+                width: 100,
+                height: 25,
+                decoration: BoxDecoration(
+                  color: badgeColor,
+                  borderRadius: BorderRadius.circular(15),
+                ),
+                alignment: Alignment.center,
+                child: Text(
+                  badgeText,
+                  style: TextStyle(
+                    color: badgeColor.computeLuminance() > 0.5
+                        ? Colors.black
+                        : Colors.white,
+                    fontSize: 10,
                   ),
                 ),
               ),
             ),
-            Container(
-              margin: const EdgeInsets.only(top: 20),
-              child: ElevatedButton(
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (context) => MealScreen()),
-                  );
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.transparent,
-                  padding: EdgeInsets.zero,
-                  textStyle: const TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                  ),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  minimumSize: const Size(330, 180),
+            Positioned(
+              top: 10,
+              left: 220,
+              child: Container(
+                width: 100,
+                height: 25,
+                decoration: BoxDecoration(
+                  color: cornerTagColor,
+                  borderRadius: BorderRadius.circular(15),
                 ),
-                child: Container(
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(20),
-                    image: DecorationImage(
-                      image: AssetImage('assets/images/Meals.png'),
-                      fit: BoxFit.cover,
+                alignment: Alignment.center,
+                child: Text(
+                  cornerTagText,
+                  style: const TextStyle(color: Colors.white, fontSize: 10),
+                ),
+              ),
+            ),
+            Positioned(
+              top: 100,
+              left: 220,
+              child: SizedBox(
+                width: 240,
+                height: 80,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      price,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 30,
+                      ),
                     ),
-                  ),
-                  width: 330,
-                  height: 180,
-                  child: Stack(
-                    children: [
-                      Positioned(
-                        bottom: 60,
-                        left: 20,
-                        child: SizedBox(
-                          width: 240,
-                          height: 80,
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                "Silver Plate",
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 30,
-                                ),
-                              ),
-                              Text(
-                                "Classic set meals with rice and main dish combos.",
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 14,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                      Positioned(
-                        top: 135,
-                        left: 20,
-                        child: Container(
-                          width: 100,
-                          height: 25,
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(15),
-                          ),
-                          child: Text(
-                            "Best Value",
-                            style: TextStyle(
-                              color: Colors.black,
-                              fontSize: 10.0,
-                            ),
-                          ),
-                        ),
-                      ),
-                      Positioned(
-                        top: 10,
-                        left: 220,
-                        child: Container(
-                          width: 100,
-                          height: 25,
-                          decoration: BoxDecoration(
-                            color: Colors.blueGrey,
-                            borderRadius: BorderRadius.circular(15),
-                          ),
-                          child: Text(
-                            "Premium Kitchen",
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 10.0,
-                            ),
-                          ),
-                        ),
-                      ),
-                      Positioned(
-                        top: 100,
-                        left: 220,
-                        child: SizedBox(
-                          width: 240,
-                          height: 80,
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                "₱120",
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 30,
-                                ),
-                              ),
-                              Text(
-                                "starting at",
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 15,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
+                    Text(
+                      priceLabel,
+                      style: const TextStyle(color: Colors.white, fontSize: 15),
+                    ),
+                  ],
                 ),
               ),
             ),
