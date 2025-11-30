@@ -7,16 +7,16 @@ service cloud.firestore {
       allow create: if request.auth != null && request.auth.uid == uid;
 
       // Allow read for owner; staff (custom claim) can list/read all
-      allow read: if request.auth != null && (request.auth.uid == uid || request.auth.token.role == 'staff');
-      allow list: if request.auth != null && request.auth.token.role == 'staff';
+      allow read: if request.auth != null && (request.auth.uid == uid || request.auth.token.isStaff == true);
+      allow list: if request.auth != null && request.auth.token.isStaff == true;
 
-      // Allow updates by owner but prevent client writes to 'role'
+      // Allow updates by owner but prevent client writes to 'isStaff'
       allow update: if request.auth != null
                     && request.auth.uid == uid
-                    && !( 'role' in request.resource.data );
+                    && !( 'isStaff' in request.resource.data );
 
       // Only admin (staff) can delete
-      allow delete: if request.auth != null && request.auth.token.role == 'staff';
+      allow delete: if request.auth != null && request.auth.token.isStaff == true;
     }
 
     // Add other rules as needed

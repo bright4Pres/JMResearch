@@ -2,13 +2,13 @@ class AppUser {
   final String uid;
   final String? email;
   final String? displayName;
-  final String role; // chooses between regular or staff
+  final bool isStaff; // true for staff, false for regular users
 
   AppUser({
     required this.uid,
     this.email,
     this.displayName,
-    this.role = 'regular',
+    this.isStaff = false,
   });
 
   // convenience factory from map (e.g., Firestore doc)
@@ -17,7 +17,7 @@ class AppUser {
       uid: data['uid'] as String,
       email: data['email'] as String?,
       displayName: data['displayName'] as String?,
-      role: data['role'] as String? ?? 'regular',
+      isStaff: data['isStaff'] as bool? ?? false,
     );
   }
 
@@ -25,6 +25,6 @@ class AppUser {
     'uid': uid,
     'email': email,
     'displayName': displayName,
-    'role': role,
+    'isStaff': isStaff,
   };
 }

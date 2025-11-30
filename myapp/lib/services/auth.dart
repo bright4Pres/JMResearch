@@ -18,27 +18,22 @@ class AuthService {
     return _auth.authStateChanges().map(_userFromFirebaseUser);
   }
 
-  // Helper to read trusted role from ID token (custom claims)
-  Future<String> getUserRole() async {
+  // Helper to check if user is staff from Firestore users collection
+  Future<bool> isUserStaff() async {
     final user = _auth.currentUser;
-    if (user == null) return 'regular';
-    final idToken = await user.getIdTokenResult(true);
-    final claims = idToken.claims;
-    if (claims != null && claims.containsKey('role')) {
-      return claims['role'] as String;
-    }
-    // fallback: try reading from users collection (read-only)
+    if (user == null) return false;
+
+    // Read from users collection directly
     try {
       final doc = await FirebaseFirestore.instance
           .collection('users')
           .doc(user.uid)
           .get();
-      if (doc.exists) return doc.data()?['role'] as String? ?? 'regular';
+      if (doc.exists) return doc.data()?['isStaff'] as bool? ?? false;
     } catch (_) {}
-    return 'regular';
-  }
+    return false;
+  } // sign in with email and password
 
-  // sign in with email and password
   Future signInWithEmailAndPassword(String email, String password) async {
     try {
       UserCredential result = await _auth.signInWithEmailAndPassword(
@@ -67,29 +62,46 @@ class AuthService {
     String name,
   ) async {
     try {
+      print('Attempting registration for: $email');
       UserCredential result = await _auth.createUserWithEmailAndPassword(
         email: email.trim(),
         password: password,
       );
       User? user = result.user;
+      print('User created successfully: ${user?.uid}');
 
-      // updates display name in home screen drawer
-      await user?.updateDisplayName(name);
+      if (user != null) {
+        // Update display name in Firebase Auth
+        await user.updateDisplayName(name);
+        print('Display name updated');
 
-      // email verifier sender
-      await user?.sendEmailVerification();
+        // Create user document in Firestore with default role
+        await FirebaseFirestore.instance.collection('users').doc(user.uid).set({
+          'uid': user.uid,
+          'email': email,
+          'displayName': name,
+          'isStaff': false,
+          'createdAt': FieldValue.serverTimestamp(),
+        });
+        print('Firestore document created');
 
-      // Sign out so the user verifies email first (we'll create profile server-side via Cloud Function)
-      await _auth.signOut();
+        // Send email verification
+        await user.sendEmailVerification();
+        print('Verification email sent');
+
+        // Sign out so the user verifies email first
+        await _auth.signOut();
+        print('User signed out for verification');
+      }
 
       return _userFromFirebaseUser(user);
     } catch (e) {
-      print(e.toString());
+      print('Registration error: ${e.toString()}');
+      print('Error details: ${e.runtimeType}');
       return null;
     }
-  }
+  } // Allow user to update safe profile fields (displayName) in Firestore
 
-  // Allow user to update safe profile fields (displayName) in Firestore
   Future updateProfile({String? displayName}) async {
     final user = _auth.currentUser;
     if (user == null) return null;
