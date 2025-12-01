@@ -1,11 +1,25 @@
-import 'package:firebase_auth/firebase_auth.dart';
-import 'package:myapp/models/app_user.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/foundation.dart';
+import 'package:myapp/models/app_user.dart';
 
 class AuthService {
-  final FirebaseAuth _auth = FirebaseAuth.instance;
+  AuthService({FirebaseAuth? auth, FirebaseFirestore? firestore})
+    : _auth = auth ?? FirebaseAuth.instance,
+      _firestore = firestore ?? FirebaseFirestore.instance;
 
-  // creates new user OBJECT from firebase
+  final FirebaseAuth _auth;
+  final FirebaseFirestore _firestore;
+
+  CollectionReference<Map<String, dynamic>> get _usersCollection =>
+      _firestore.collection('users');
+
+  DocumentReference<Map<String, dynamic>> _userDoc(String uid) =>
+      _usersCollection.doc(uid);
+
+  void _log(String message) => debugPrint('AuthService: $message');
+
+  // wrap helper to turn Firebase's user into our AppUser once they verify
   AppUser? _userFromFirebaseUser(User? user) {
     if (user != null && !user.emailVerified) {
       return null;
@@ -13,36 +27,40 @@ class AuthService {
     return user != null ? AppUser(uid: user.uid) : null;
   }
 
-  // on auth change
+  // stream out auth changes so the rest of the app has access to data
   Stream<AppUser?> get user {
     return _auth.authStateChanges().map(_userFromFirebaseUser);
   }
 
-  // Helper to check if user is staff from Firestore users collection
+  // quick trip to Firestore to see if this user is flagged as staff
   Future<bool> isUserStaff() async {
     final user = _auth.currentUser;
     if (user == null) return false;
 
-    // Read from users collection directly
+    // poke the users doc and read the bool
     try {
-      final doc = await FirebaseFirestore.instance
-          .collection('users')
-          .doc(user.uid)
-          .get();
+      final doc = await _userDoc(user.uid).get();
       if (doc.exists) return doc.data()?['isStaff'] as bool? ?? false;
-    } catch (_) {}
+    } catch (e) {
+      _log('isUserStaff error: $e');
+    }
     return false;
-  } // sign in with email and password
+  }
 
-  Future signInWithEmailAndPassword(String email, String password) async {
+  // plain email+password login with verification
+  Future<AppUser?> signInWithEmailAndPassword(
+    String email,
+    String password,
+  ) async {
+    final trimmedEmail = email.trim();
     try {
-      UserCredential result = await _auth.signInWithEmailAndPassword(
-        email: email.trim(),
+      final result = await _auth.signInWithEmailAndPassword(
+        email: trimmedEmail,
         password: password,
       );
-      User? user = result.user;
+      final user = result.user;
 
-      // checks if email is verified in firebase
+      // error handling for unverified emails
       if (user != null && !user.emailVerified) {
         await _auth.signOut();
         throw Exception('Please verify your email before signing in');
@@ -50,63 +68,65 @@ class AuthService {
 
       return _userFromFirebaseUser(user);
     } catch (e) {
-      print(e.toString());
+      _log('signInWithEmailAndPassword error: $e');
       return null;
     }
   }
 
-  // register with email and password
-  Future registerWithEmailAndPassword(
+  // spin up a new user with email/pass plus the usual starter metadata
+  Future<AppUser?> registerWithEmailAndPassword(
     String email,
     String password,
     String name,
   ) async {
+    final trimmedEmail = email.trim();
     try {
-      print('Attempting registration for: $email');
+      _log('Attempting registration for: $trimmedEmail');
       UserCredential result = await _auth.createUserWithEmailAndPassword(
-        email: email.trim(),
+        email: trimmedEmail,
         password: password,
       );
       User? user = result.user;
-      print('User created successfully: ${user?.uid}');
+      _log('User created successfully: ${user?.uid}');
 
       if (user != null) {
         // Update display name in Firebase Auth
         await user.updateDisplayName(name);
-        print('Display name updated');
+        _log('Display name updated');
 
         // Create user document in Firestore with default role
-        await FirebaseFirestore.instance.collection('users').doc(user.uid).set({
+        await _userDoc(user.uid).set({
           'uid': user.uid,
-          'email': email,
+          'email': trimmedEmail,
           'displayName': name,
           'isStaff': false,
           'createdAt': FieldValue.serverTimestamp(),
         });
-        print('Firestore document created');
+        _log('Firestore document created');
 
-        // Send email verification
+        // sends email verification
         await user.sendEmailVerification();
-        print('Verification email sent');
+        _log('Verification email sent');
 
-        // Sign out so the user verifies email first
+        // signs out so the user verifies email first
         await _auth.signOut();
-        print('User signed out for verification');
+        _log('User signed out for verification');
       }
 
       return _userFromFirebaseUser(user);
     } catch (e) {
-      print('Registration error: ${e.toString()}');
-      print('Error details: ${e.runtimeType}');
+      _log('Registration error: $e');
+      _log('Error details: ${e.runtimeType}');
       return null;
     }
-  } // Allow user to update safe profile fields (displayName) in Firestore
+  }
 
-  Future updateProfile({String? displayName}) async {
+  // let users edit safe profile bits (displayName + email mirror)
+  Future<bool?> updateProfile({String? displayName}) async {
     final user = _auth.currentUser;
     if (user == null) return null;
 
-    // Update Firebase Auth displayName
+    // update display name in Firebase Auths
     if (displayName != null) {
       await user.updateDisplayName(displayName);
     }
@@ -116,24 +136,22 @@ class AuthService {
       final data = <String, dynamic>{};
       if (displayName != null) data['displayName'] = displayName;
       data['email'] = user.email;
-      await FirebaseFirestore.instance
-          .collection('users')
-          .doc(user.uid)
-          .set(data, SetOptions(merge: true));
+      await _userDoc(user.uid).set(data, SetOptions(merge: true));
       return true;
     } catch (e) {
-      print(e);
+      _log('updateProfile error: $e');
       return null;
     }
   }
 
   // sign out
-  Future signOut() async {
+  Future<bool> signOut() async {
     try {
-      return await _auth.signOut();
+      await _auth.signOut();
+      return true;
     } catch (e) {
-      print(e.toString());
-      return null;
+      _log('signOut error: $e');
+      return false;
     }
   }
 }

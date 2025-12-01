@@ -357,7 +357,7 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  // Helper method to build drawer items
+  // build drawer rows
   Widget _buildDrawerItem({
     required IconData icon,
     required String title,
@@ -379,7 +379,7 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  // Sign out confirmation dialog
+  // sign out modal
   void _showSignOutDialog(BuildContext context) {
     showDialog(
       context: context,
@@ -396,8 +396,17 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
             TextButton(
               onPressed: () async {
-                await widget._auth.signOut();
-                Navigator.of(context).pop();
+                final navigator = Navigator.of(context);
+                final messenger = ScaffoldMessenger.of(context);
+                final didSignOut = await widget._auth.signOut();
+                navigator.pop();
+                if (!didSignOut) {
+                  messenger.showSnackBar(
+                    const SnackBar(
+                      content: Text('Failed to sign out. Please try again.'),
+                    ),
+                  );
+                }
               },
               child: Text('Sign Out', style: TextStyle(color: Colors.red[700])),
             ),

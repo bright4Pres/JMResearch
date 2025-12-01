@@ -7,14 +7,13 @@ class SignIn extends StatefulWidget {
   const SignIn({super.key, required this.toggleView});
 
   @override
-  _SignInState createState() => _SignInState();
+  SignInState createState() => SignInState();
 }
 
-class _SignInState extends State<SignIn> {
+class SignInState extends State<SignIn> {
   final AuthService _auth = AuthService();
   final _formKey = GlobalKey<FormState>();
 
-  // Text field state
   String email = '';
   String password = '';
   String error = '';
@@ -29,7 +28,6 @@ class _SignInState extends State<SignIn> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              // Branding
               Column(
                 children: [
                   Text(
@@ -53,7 +51,7 @@ class _SignInState extends State<SignIn> {
               ),
               SizedBox(height: 40),
 
-              // Auth Container
+              // auth form conatainre
               Container(
                 width: 340,
                 padding: EdgeInsets.all(30),
@@ -62,7 +60,7 @@ class _SignInState extends State<SignIn> {
                   borderRadius: BorderRadius.circular(20),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.1),
+                      color: Colors.black.withValues(alpha: 0.1),
                       blurRadius: 10,
                       offset: Offset(0, 5),
                     ),
@@ -84,7 +82,7 @@ class _SignInState extends State<SignIn> {
                       ),
                       SizedBox(height: 30),
 
-                      // Email Field
+                      //
                       TextFormField(
                         decoration: InputDecoration(
                           labelText: 'Email',
@@ -120,7 +118,6 @@ class _SignInState extends State<SignIn> {
                       ),
                       SizedBox(height: 20),
 
-                      // Password Field
                       TextFormField(
                         decoration: InputDecoration(
                           labelText: 'Password',
@@ -155,7 +152,6 @@ class _SignInState extends State<SignIn> {
                       ),
                       SizedBox(height: 30),
 
-                      // Sign In Button
                       ElevatedButton(
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Colors.deepOrange,
@@ -172,7 +168,7 @@ class _SignInState extends State<SignIn> {
                                     loading = true;
                                     error = '';
                                   });
-                                  dynamic result = await _auth
+                                  final result = await _auth
                                       .signInWithEmailAndPassword(
                                         email,
                                         password,
@@ -206,7 +202,6 @@ class _SignInState extends State<SignIn> {
                       ),
                       SizedBox(height: 12),
 
-                      // Error Message
                       if (error.isNotEmpty)
                         Text(
                           error,
@@ -216,7 +211,6 @@ class _SignInState extends State<SignIn> {
 
                       SizedBox(height: 20),
 
-                      // Toggle to Register
                       Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [

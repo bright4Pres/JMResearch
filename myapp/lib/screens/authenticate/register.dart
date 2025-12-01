@@ -7,10 +7,10 @@ class Register extends StatefulWidget {
   const Register({super.key, required this.toggleView});
 
   @override
-  _RegisterState createState() => _RegisterState();
+  RegisterState createState() => RegisterState();
 }
 
-class _RegisterState extends State<Register> {
+class RegisterState extends State<Register> {
   final AuthService _auth = AuthService();
   final _formKey = GlobalKey<FormState>();
 
@@ -62,7 +62,7 @@ class _RegisterState extends State<Register> {
                   borderRadius: BorderRadius.circular(20),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.1),
+                      color: Colors.black.withValues(alpha: 0.1),
                       blurRadius: 10,
                       offset: Offset(0, 5),
                     ),
@@ -232,7 +232,7 @@ class _RegisterState extends State<Register> {
                                   : () async {
                                       if (_formKey.currentState!.validate()) {
                                         setState(() => loading = true);
-                                        dynamic result = await _auth
+                                        final result = await _auth
                                             .registerWithEmailAndPassword(
                                               email,
                                               password,
