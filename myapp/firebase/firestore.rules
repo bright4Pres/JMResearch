@@ -72,6 +72,32 @@ service cloud.firestore {
         resource.data.ownerId == request.auth.uid;
     }
 
+    // Orders collection
+    match /orders/{orderId} {
+      // Customers can create orders only for themselves
+      allow create: if request.auth != null &&
+        request.resource.data.userId == request.auth.uid;
+
+      // Read/list if customer owns it, the kitchen owner owns it, or caller is staff
+      allow read, list: if request.auth != null && (
+        resource.data.userId == request.auth.uid ||
+        resource.data.ownerId == request.auth.uid ||
+        isStaff(request.auth.uid)
+      );
+
+      // Updates allowed for kitchen owner or staff (e.g., to progress status)
+      allow update: if request.auth != null && (
+        resource.data.ownerId == request.auth.uid ||
+        isStaff(request.auth.uid)
+      );
+
+      // Deletion restricted to kitchen owner or staff
+      allow delete: if request.auth != null && (
+        resource.data.ownerId == request.auth.uid ||
+        isStaff(request.auth.uid)
+      );
+    }
+
     // Add other rules as needed
   }
 }

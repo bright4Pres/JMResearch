@@ -1,8 +1,5 @@
-import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:image_picker/image_picker.dart';
 import '../../services/vendor_kitchen_service.dart';
-import '../../services/image_service.dart';
 
 class AddItemScreen extends StatefulWidget {
   final Kitchen kitchen;
@@ -29,10 +26,6 @@ class _AddItemScreenState extends State<AddItemScreen> {
   final _priceController = TextEditingController();
 
   final VendorKitchenService _vendorService = VendorKitchenService();
-  final ImageService _imageService = ImageService();
-
-  XFile? _selectedImage;
-  String? _existingImageUrl;
   bool _isLoading = false;
 
   bool get _isEditing => widget.editingItem != null;
@@ -44,7 +37,6 @@ class _AddItemScreenState extends State<AddItemScreen> {
       _nameController.text = widget.editingItem!.name;
       _descriptionController.text = widget.editingItem!.description;
       _priceController.text = widget.editingItem!.price.toString();
-      _existingImageUrl = widget.editingItem!.imageUrl;
     }
   }
 
@@ -101,10 +93,6 @@ class _AddItemScreenState extends State<AddItemScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // Image Upload Section
-              _buildImageUploadSection(),
-              const SizedBox(height: 24),
-
               // Item Name
               _buildTextField(
                 controller: _nameController,
@@ -179,137 +167,6 @@ class _AddItemScreenState extends State<AddItemScreen> {
     );
   }
 
-  Widget _buildImageUploadSection() {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.1),
-            blurRadius: 6,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            'Item Image',
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-              color: Colors.black87,
-            ),
-          ),
-          const SizedBox(height: 12),
-
-          // Image Preview
-          Container(
-            height: 200,
-            width: double.infinity,
-            decoration: BoxDecoration(
-              color: Colors.grey[100],
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: Colors.grey[300]!),
-            ),
-            child: _buildImagePreview(),
-          ),
-          const SizedBox(height: 12),
-
-          // Upload Buttons
-          Row(
-            children: [
-              Expanded(
-                child: OutlinedButton.icon(
-                  onPressed: () => _pickImage(false),
-                  icon: const Icon(Icons.photo_library),
-                  label: const Text('Gallery'),
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: Colors.deepOrange,
-                    side: const BorderSide(color: Colors.deepOrange),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: OutlinedButton.icon(
-                  onPressed: () => _pickImage(true),
-                  icon: const Icon(Icons.camera_alt),
-                  label: const Text('Camera'),
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: Colors.deepOrange,
-                    side: const BorderSide(color: Colors.deepOrange),
-                  ),
-                ),
-              ),
-            ],
-          ),
-          if (_selectedImage != null || _existingImageUrl != null)
-            Padding(
-              padding: const EdgeInsets.only(top: 8),
-              child: TextButton.icon(
-                onPressed: _removeImage,
-                icon: const Icon(Icons.delete, color: Colors.red),
-                label: const Text(
-                  'Remove Image',
-                  style: TextStyle(color: Colors.red),
-                ),
-              ),
-            ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildImagePreview() {
-    if (_selectedImage != null) {
-      return ClipRRect(
-        borderRadius: BorderRadius.circular(8),
-        child: Image.file(
-          File(_selectedImage!.path),
-          fit: BoxFit.cover,
-          width: double.infinity,
-        ),
-      );
-    } else if (_existingImageUrl != null) {
-      return ClipRRect(
-        borderRadius: BorderRadius.circular(8),
-        child: Image.network(
-          _existingImageUrl!,
-          fit: BoxFit.cover,
-          width: double.infinity,
-          errorBuilder: (context, error, stackTrace) {
-            return _buildPlaceholder();
-          },
-        ),
-      );
-    } else {
-      return _buildPlaceholder();
-    }
-  }
-
-  Widget _buildPlaceholder() {
-    return Column(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        Icon(Icons.image, size: 64, color: Colors.grey[400]),
-        const SizedBox(height: 8),
-        Text(
-          'No image selected',
-          style: TextStyle(color: Colors.grey[600], fontSize: 16),
-        ),
-        const SizedBox(height: 4),
-        Text(
-          'Tap gallery or camera to add an image',
-          style: TextStyle(color: Colors.grey[500], fontSize: 12),
-        ),
-      ],
-    );
-  }
-
   Widget _buildTextField({
     required TextEditingController controller,
     required String label,
@@ -353,24 +210,6 @@ class _AddItemScreenState extends State<AddItemScreen> {
     );
   }
 
-  void _pickImage(bool fromCamera) async {
-    final XFile? image = await _imageService.pickImage(fromCamera: fromCamera);
-    if (image != null) {
-      setState(() {
-        _selectedImage = image;
-        _existingImageUrl =
-            null; // Clear existing image when new one is selected
-      });
-    }
-  }
-
-  void _removeImage() {
-    setState(() {
-      _selectedImage = null;
-      _existingImageUrl = null;
-    });
-  }
-
   void _submitForm() async {
     if (!_formKey.currentState!.validate()) return;
 
@@ -380,17 +219,6 @@ class _AddItemScreenState extends State<AddItemScreen> {
 
     try {
       final price = double.parse(_priceController.text);
-      String? imageUrl = _existingImageUrl;
-
-      if (_selectedImage != null) {
-        imageUrl = await _imageService.uploadImage(
-          _selectedImage!,
-          widget.category,
-        );
-        if (imageUrl == null) {
-          throw Exception('Failed to upload image');
-        }
-      }
 
       if (!mounted) return;
 
@@ -399,7 +227,6 @@ class _AddItemScreenState extends State<AddItemScreen> {
         name: _nameController.text.trim(),
         description: _descriptionController.text.trim(),
         price: price,
-        imageUrl: imageUrl,
         category: widget.category,
         kitchenId: widget.kitchen.id,
         ownerId: widget.kitchen.ownerId,

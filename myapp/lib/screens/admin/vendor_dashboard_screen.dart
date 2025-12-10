@@ -45,6 +45,7 @@ class _VendorDashboardScreenState extends State<VendorDashboardScreen> {
             fontWeight: FontWeight.bold,
           ),
         ),
+        centerTitle: true,
         backgroundColor: Colors.white,
         iconTheme: const IconThemeData(color: Colors.deepOrange),
       ),
@@ -216,32 +217,17 @@ class _VendorDashboardScreenState extends State<VendorDashboardScreen> {
           child: Row(
             children: [
               // Kitchen Image
-              ClipRRect(
-                borderRadius: BorderRadius.circular(8),
-                child: Container(
-                  width: 80,
-                  height: 80,
-                  decoration: BoxDecoration(
-                    color: Colors.grey[200],
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: kitchen.imageUrl != null
-                      ? Image.network(
-                          kitchen.imageUrl!,
-                          fit: BoxFit.cover,
-                          errorBuilder: (context, error, stackTrace) {
-                            return Icon(
-                              Icons.restaurant,
-                              color: Colors.grey[400],
-                              size: 40,
-                            );
-                          },
-                        )
-                      : Icon(
-                          Icons.restaurant,
-                          color: Colors.grey[400],
-                          size: 40,
-                        ),
+              Container(
+                width: 80,
+                height: 80,
+                decoration: BoxDecoration(
+                  color: Colors.grey[200],
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Icon(
+                  Icons.restaurant,
+                  color: Colors.grey[400],
+                  size: 40,
                 ),
               ),
               const SizedBox(width: 16),

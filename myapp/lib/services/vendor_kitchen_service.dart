@@ -112,6 +112,57 @@ class KitchenItem {
 class VendorKitchenService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
+  // Orders
+  Future<bool> createOrder(KitchenOrder order) async {
+    try {
+      await _firestore.collection('orders').add(order.toMap());
+      return true;
+    } catch (e) {
+      print('Error creating order: $e');
+      return false;
+    }
+  }
+
+  Stream<List<KitchenOrder>> getOrdersByKitchen(String kitchenId) {
+    return _firestore
+        .collection('orders')
+        .where('kitchenId', isEqualTo: kitchenId)
+        .orderBy('createdAt', descending: true)
+        .snapshots()
+        .map(
+          (snapshot) => snapshot.docs
+              .map((doc) => KitchenOrder.fromFirestore(doc))
+              .toList(),
+        );
+  }
+
+  Stream<List<KitchenOrder>> getOrdersForUser(String userId) {
+    if (userId.isEmpty) return Stream.value([]);
+
+    return _firestore
+        .collection('orders')
+        .where('userId', isEqualTo: userId)
+        .orderBy('createdAt', descending: true)
+        .snapshots()
+        .map(
+          (snapshot) => snapshot.docs
+              .map((doc) => KitchenOrder.fromFirestore(doc))
+              .toList(),
+        );
+  }
+
+  Future<bool> updateOrderStatus(String orderId, String status) async {
+    try {
+      await _firestore.collection('orders').doc(orderId).update({
+        'status': status,
+      });
+      return true;
+    } catch (e) {
+      print('Error updating order status: $e');
+      return false;
+    }
+  }
+
   // Kitchen Management
   Future<bool> createKitchen(Kitchen kitchen) async {
     try {
@@ -266,5 +317,103 @@ class VendorKitchenService {
               .map((doc) => KitchenItem.fromFirestore(doc))
               .toList(),
         );
+  }
+}
+
+class KitchenOrder {
+  KitchenOrder({
+    required this.id,
+    required this.kitchenId,
+    required this.kitchenName,
+    this.userId = '',
+    required this.ownerId,
+    required this.customerName,
+    required this.pickupLocation,
+    this.status = 'pending',
+    required this.total,
+    required this.items,
+    required this.createdAt,
+  });
+
+  final String id;
+  final String kitchenId;
+  final String kitchenName;
+  final String userId;
+  final String ownerId;
+  final String customerName;
+  final String pickupLocation;
+  final String status;
+  final double total;
+  final List<KitchenOrderItem> items;
+  final DateTime createdAt;
+
+  Map<String, dynamic> toMap() {
+    return {
+      'kitchenId': kitchenId,
+      'kitchenName': kitchenName,
+      'userId': userId,
+      'ownerId': ownerId,
+      'customerName': customerName,
+      'pickupLocation': pickupLocation,
+      'status': status,
+      'total': total,
+      'items': items.map((e) => e.toMap()).toList(),
+      'createdAt': Timestamp.fromDate(createdAt),
+    };
+  }
+
+  factory KitchenOrder.fromFirestore(DocumentSnapshot doc) {
+    final data = doc.data() as Map<String, dynamic>;
+    return KitchenOrder(
+      id: doc.id,
+      kitchenId: data['kitchenId'] ?? '',
+      kitchenName: data['kitchenName'] ?? '',
+      userId: data['userId'] ?? '',
+      ownerId: data['ownerId'] ?? '',
+      customerName: data['customerName'] ?? '',
+      pickupLocation: data['pickupLocation'] ?? '',
+      status: data['status'] ?? 'pending',
+      total: (data['total'] ?? 0).toDouble(),
+      items: (data['items'] as List<dynamic>? ?? [])
+          .map((e) => KitchenOrderItem.fromMap(e as Map<String, dynamic>))
+          .toList(),
+      createdAt: (data['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
+    );
+  }
+}
+
+class KitchenOrderItem {
+  KitchenOrderItem({
+    required this.itemId,
+    required this.name,
+    required this.price,
+    required this.qty,
+    required this.category,
+  });
+
+  final String itemId;
+  final String name;
+  final double price;
+  final int qty;
+  final String category;
+
+  Map<String, dynamic> toMap() {
+    return {
+      'itemId': itemId,
+      'name': name,
+      'price': price,
+      'qty': qty,
+      'category': category,
+    };
+  }
+
+  factory KitchenOrderItem.fromMap(Map<String, dynamic> data) {
+    return KitchenOrderItem(
+      itemId: data['itemId'] ?? '',
+      name: data['name'] ?? '',
+      price: (data['price'] ?? 0).toDouble(),
+      qty: (data['qty'] ?? 0).toInt(),
+      category: data['category'] ?? '',
+    );
   }
 }

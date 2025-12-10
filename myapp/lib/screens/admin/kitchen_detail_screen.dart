@@ -20,7 +20,7 @@ class _KitchenDetailScreenState extends State<KitchenDetailScreen>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 2, vsync: this);
+    _tabController = TabController(length: 3, vsync: this);
   }
 
   @override
@@ -51,6 +51,7 @@ class _KitchenDetailScreenState extends State<KitchenDetailScreen>
           tabs: const [
             Tab(icon: Icon(Icons.restaurant), text: 'Full Meals'),
             Tab(icon: Icon(Icons.fastfood), text: 'Snacks'),
+            Tab(icon: Icon(Icons.receipt_long), text: 'Orders'),
           ],
         ),
       ),
@@ -65,6 +66,7 @@ class _KitchenDetailScreenState extends State<KitchenDetailScreen>
               children: [
                 _buildItemsList('fullmeals'),
                 _buildItemsList('snacks'),
+                _buildOrdersList(),
               ],
             ),
           ),
@@ -95,31 +97,6 @@ class _KitchenDetailScreenState extends State<KitchenDetailScreen>
       ),
       child: Row(
         children: [
-          // Kitchen Image
-          ClipRRect(
-            borderRadius: BorderRadius.circular(8),
-            child: Container(
-              width: 80,
-              height: 80,
-              decoration: BoxDecoration(
-                color: Colors.grey[200],
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: widget.kitchen.imageUrl != null
-                  ? Image.network(
-                      widget.kitchen.imageUrl!,
-                      fit: BoxFit.cover,
-                      errorBuilder: (context, error, stackTrace) {
-                        return Icon(
-                          Icons.restaurant,
-                          color: Colors.grey[400],
-                          size: 40,
-                        );
-                      },
-                    )
-                  : Icon(Icons.restaurant, color: Colors.grey[400], size: 40),
-            ),
-          ),
           const SizedBox(width: 16),
           // Kitchen Details
           Expanded(
@@ -243,31 +220,6 @@ class _KitchenDetailScreenState extends State<KitchenDetailScreen>
         padding: const EdgeInsets.all(12),
         child: Row(
           children: [
-            // Item Image
-            ClipRRect(
-              borderRadius: BorderRadius.circular(8),
-              child: Container(
-                width: 80,
-                height: 80,
-                decoration: BoxDecoration(
-                  color: Colors.grey[200],
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: item.imageUrl != null
-                    ? Image.network(
-                        item.imageUrl!,
-                        fit: BoxFit.cover,
-                        errorBuilder: (context, error, stackTrace) {
-                          return Icon(
-                            Icons.image_not_supported,
-                            color: Colors.grey[400],
-                            size: 40,
-                          );
-                        },
-                      )
-                    : Icon(Icons.image, color: Colors.grey[400], size: 40),
-              ),
-            ),
             const SizedBox(width: 12),
             // Item Details
             Expanded(
@@ -388,6 +340,188 @@ class _KitchenDetailScreenState extends State<KitchenDetailScreen>
           ],
         );
       },
+    );
+  }
+
+  Widget _buildOrdersList() {
+    return StreamBuilder<List<KitchenOrder>>(
+      stream: _vendorService.getOrdersByKitchen(widget.kitchen.id),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        }
+
+        if (snapshot.hasError) {
+          return Center(
+            child: Text(
+              'Error: ${snapshot.error}',
+              style: const TextStyle(color: Colors.red),
+            ),
+          );
+        }
+
+        final orders = snapshot.data ?? [];
+        if (orders.isEmpty) {
+          return Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: const [
+                Icon(Icons.receipt_long, size: 64, color: Colors.grey),
+                SizedBox(height: 12),
+                Text('No orders yet for this kitchen'),
+              ],
+            ),
+          );
+        }
+
+        return ListView.separated(
+          padding: const EdgeInsets.all(16),
+          itemCount: orders.length,
+          separatorBuilder: (_, __) => const SizedBox(height: 12),
+          itemBuilder: (context, index) {
+            final order = orders[index];
+            final status = order.status.isEmpty
+                ? 'PENDING'
+                : order.status.toUpperCase();
+            final statusBg = order.status.toLowerCase() == 'pending'
+                ? Colors.orange[100]
+                : Colors.green[100];
+            final statusFg = order.status.toLowerCase() == 'pending'
+                ? Colors.orange[800]
+                : Colors.green[800];
+            return Card(
+              elevation: 2,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.all(14),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              order.customerName.isEmpty
+                                  ? 'Guest'
+                                  : order.customerName,
+                              style: const TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                            const SizedBox(height: 6),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 10,
+                                vertical: 4,
+                              ),
+                              decoration: BoxDecoration(
+                                color: statusBg,
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              child: Text(
+                                status,
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w700,
+                                  color: statusFg,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        Text(
+                          '₱${order.total.toStringAsFixed(2)}',
+                          style: const TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w700,
+                            color: Colors.deepOrange,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      'Pickup: ${order.pickupLocation}',
+                      style: TextStyle(color: Colors.grey[700]),
+                    ),
+                    const SizedBox(height: 8),
+                    ...order.items.map(
+                      (item) => Padding(
+                        padding: const EdgeInsets.only(bottom: 4),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Expanded(
+                              child: Text(
+                                '${item.qty} x ${item.name}',
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                            Text(
+                              '₱${(item.price * item.qty).toStringAsFixed(2)}',
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      'Placed: ${order.createdAt}',
+                      style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                    ),
+                    const SizedBox(height: 10),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: OutlinedButton(
+                            onPressed: () =>
+                                _setStatus(order.id, 'ready for pick up'),
+                            child: const Text('Set Ready for Pick Up'),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: ElevatedButton(
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.green[600],
+                            ),
+                            onPressed: () => _setStatus(order.id, 'finished'),
+                            child: const Text(
+                              'Mark Finished',
+                              style: TextStyle(color: Colors.white),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Future<void> _setStatus(String orderId, String status) async {
+    final success = await _vendorService.updateOrderStatus(orderId, status);
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          success
+              ? 'Order updated to ${status.toUpperCase()}'
+              : 'Failed to update order',
+        ),
+        backgroundColor: success ? Colors.green : Colors.red,
+      ),
     );
   }
 }

@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'meal_screen.dart';
 import 'package:myapp/services/auth.dart';
 import 'package:myapp/services/user_service.dart';
 import 'package:myapp/models/app_user.dart';
+import '../../services/vendor_kitchen_service.dart';
+import 'kitchen_menu_screen.dart';
+import 'orders_screen.dart';
 import '../admin/vendor_dashboard_screen.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -17,6 +19,7 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   User? currentUser;
   final UserService _userService = UserService();
+  final VendorKitchenService _vendorService = VendorKitchenService();
 
   @override
   void initState() {
@@ -34,6 +37,7 @@ class _HomeScreenState extends State<HomeScreen> {
         return Scaffold(
           backgroundColor: const Color.fromARGB(255, 255, 236, 191),
           appBar: AppBar(
+            // keep the same app shell for both customers and staff
             toolbarHeight: 70,
             backgroundColor: Colors.white,
             leading: Builder(
@@ -91,8 +95,8 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
           drawer: _buildDrawer(appUser),
           body: appUser?.isStaff == true
-              ? _buildStaffView()
-              : _buildCustomerView(),
+              ? const VendorDashboardScreen()
+              : _buildCustomerView(appUser),
         );
       },
     );
@@ -297,288 +301,260 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildStaffView() {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
+  Widget _buildCustomerView(AppUser? appUser) {
+    return StreamBuilder<List<Kitchen>>(
+      stream: _vendorService.getAllKitchens(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        }
+
+        if (snapshot.hasError) {
+          return Center(
+            child: Text(
+              'Error loading kitchens: ${snapshot.error}',
+              style: const TextStyle(color: Colors.red),
+            ),
+          );
+        }
+
+        final kitchens = snapshot.data ?? [];
+
+        final children = <Widget>[
+          _buildOrdersShortcut(context),
+          const SizedBox(height: 16),
+        ];
+
+        if (kitchens.isEmpty) {
+          children.add(
             Container(
-              width: double.infinity,
               padding: const EdgeInsets.all(24),
               decoration: BoxDecoration(
                 color: Colors.white,
-                borderRadius: BorderRadius.circular(16),
+                borderRadius: BorderRadius.circular(12),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.1),
-                    blurRadius: 10,
-                    offset: const Offset(0, 4),
+                    color: Colors.black.withOpacity(0.05),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
                   ),
                 ],
               ),
               child: Column(
-                children: [
-                  Icon(Icons.store, size: 80, color: Colors.deepOrange),
-                  const SizedBox(height: 16),
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: const [
+                  Icon(Icons.store_outlined, size: 64, color: Colors.white),
+                  SizedBox(height: 12),
                   Text(
-                    'VENDOR DASHBOAORD',
-                    style: TextStyle(
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.deepOrange,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'create and manage kitchen and food items.',
+                    'No kitchens available yet.',
+                    style: TextStyle(fontSize: 16, color: Colors.white),
                     textAlign: TextAlign.center,
-                    style: TextStyle(fontSize: 16, color: Colors.grey[600]),
-                  ),
-                  const SizedBox(height: 24),
-                  ElevatedButton.icon(
-                    onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => const VendorDashboardScreen(),
-                        ),
-                      );
-                    },
-                    icon: const Icon(Icons.store),
-                    label: const Text('Open Dashboard'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.deepOrange,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 32,
-                        vertical: 16,
-                      ),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
                   ),
                 ],
               ),
             ),
+          );
+        } else {
+          children.addAll(
+            kitchens.map(
+              (kitchen) => Padding(
+                padding: const EdgeInsets.only(bottom: 12),
+                child: InkWell(
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => KitchenMenuScreen(
+                          kitchen: kitchen,
+                          initialCategory: 'snacks',
+                        ),
+                      ),
+                    );
+                  },
+                  child: Card(
+                    color: Colors.white,
+                    elevation: 2,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Container(
+                                width: 56,
+                                height: 56,
+                                decoration: BoxDecoration(
+                                  color: Colors.orange[50],
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: const Icon(
+                                  Icons.store,
+                                  color: Colors.deepOrange,
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      kitchen.name,
+                                      style: const TextStyle(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      kitchen.description,
+                                      style: TextStyle(
+                                        fontSize: 13,
+                                        color: Colors.grey[600],
+                                      ),
+                                      maxLines: 2,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 8,
+                                  vertical: 4,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: kitchen.isActive
+                                      ? Colors.green[100]
+                                      : Colors.red[100],
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: Text(
+                                  kitchen.isActive ? 'OPEN' : 'CLOSED',
+                                  style: TextStyle(
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.bold,
+                                    color: kitchen.isActive
+                                        ? Colors.green[700]
+                                        : Colors.red[700],
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 12),
+                          Wrap(
+                            spacing: 8,
+                            runSpacing: 8,
+                            children: [
+                              _buildKitchenChip(
+                                icon: Icons.restaurant,
+                                label: 'Full Meals',
+                              ),
+                              _buildKitchenChip(
+                                icon: Icons.fastfood,
+                                label: 'Snacks',
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          );
+        }
+
+        return ListView(padding: const EdgeInsets.all(16), children: children);
+      },
+    );
+  }
+
+  Widget _buildOrdersShortcut(BuildContext context) {
+    return GestureDetector(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => OrdersScreen()),
+        );
+      },
+      child: Container(
+        padding: const EdgeInsets.all(18),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(14),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.08),
+              blurRadius: 10,
+              offset: const Offset(0, 3),
+            ),
+          ],
+          border: Border.all(color: Colors.deepOrange, width: 1.2),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 48,
+              height: 48,
+              decoration: BoxDecoration(
+                color: Colors.deepOrange,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: const Icon(Icons.receipt_long, color: Colors.white),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: const [
+                  Text(
+                    'Orders',
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                  ),
+                  SizedBox(height: 4),
+                  Text(
+                    'View pending and past orders',
+                    style: TextStyle(fontSize: 13, color: Colors.black54),
+                  ),
+                ],
+              ),
+            ),
+            const Icon(Icons.chevron_right, color: Colors.deepOrange),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildCustomerView() {
-    return Center(
-      child: Column(
+  Widget _buildKitchenChip({required IconData icon, required String label}) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+      decoration: BoxDecoration(
+        color: Colors.orange[50],
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: Colors.orange[200]!),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
         children: [
-          Container(
-            margin: const EdgeInsets.only(top: 20),
-            child: ElevatedButton(
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => MealScreen()),
-                );
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.transparent,
-                padding: EdgeInsets.zero,
-                textStyle: const TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                ),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                minimumSize: const Size(330, 180),
-              ),
-              child: Container(
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(20),
-                  image: DecorationImage(
-                    image: AssetImage('assets/images/Meals.png'),
-                    fit: BoxFit.cover,
-                  ),
-                ),
-                width: 330,
-                height: 180,
-                child: Stack(
-                  children: [
-                    Positioned(
-                      top: 20,
-                      left: 20,
-                      child: Container(
-                        width: 100,
-                        height: 25,
-                        decoration: BoxDecoration(
-                          color: const Color.fromARGB(255, 255, 255, 35),
-                          borderRadius: BorderRadius.circular(15),
-                        ),
-                        child: Text(
-                          "Campus Canteen",
-                          style: TextStyle(color: Colors.black, fontSize: 10.0),
-                        ),
-                      ),
-                    ),
-                    Positioned(
-                      bottom: 10,
-                      left: 20,
-                      child: SizedBox(
-                        width: 200,
-                        height: 35,
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              "Full Meals",
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontWeight: FontWeight.bold,
-                                fontSize: 15,
-                              ),
-                            ),
-                            Text(
-                              "Red Plate x Silver Plate x No Queue!",
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 9,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-          Container(
-            margin: const EdgeInsets.only(top: 20),
-            child: ElevatedButton(
-              onPressed: () {},
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.transparent,
-                padding: EdgeInsets.zero,
-                textStyle: const TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                ),
-                shape: RoundedRectangleBorder(),
-                minimumSize: const Size(330, 180),
-              ),
-              child: Container(
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(20),
-                  image: DecorationImage(
-                    image: AssetImage('assets/images/Snacks.png'),
-                    fit: BoxFit.cover,
-                  ),
-                ),
-                width: 330,
-                height: 180,
-                child: Stack(
-                  children: [
-                    Positioned(
-                      top: 20,
-                      left: 20,
-                      child: Container(
-                        width: 100,
-                        height: 25,
-                        decoration: BoxDecoration(
-                          color: const Color.fromARGB(255, 255, 255, 35),
-                          borderRadius: BorderRadius.circular(15),
-                        ),
-                        child: Text(
-                          "Campus Vendors",
-                          style: TextStyle(color: Colors.black, fontSize: 10.0),
-                        ),
-                      ),
-                    ),
-                    Positioned(
-                      bottom: 10,
-                      left: 20,
-                      child: SizedBox(
-                        width: 200,
-                        height: 35,
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              "Snacks & Treats",
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontWeight: FontWeight.bold,
-                                fontSize: 15,
-                              ),
-                            ),
-                            Text(
-                              "Judy's x Lopez's x KD's Churro's!",
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 9,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
+          Icon(icon, size: 16, color: Colors.deepOrange),
+          const SizedBox(width: 6),
+          Text(
+            label,
+            style: const TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: Colors.deepOrange,
             ),
           ),
         ],
       ),
     );
-  }
-
-  Widget _buildQuickActionCard({
-    required IconData icon,
-    required String title,
-    required String subtitle,
-    required VoidCallback onTap,
-  }) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(12),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.1),
-              blurRadius: 6,
-              offset: const Offset(0, 2),
-            ),
-          ],
-        ),
-        child: Column(
-          children: [
-            Icon(icon, size: 40, color: Colors.deepOrange),
-            const SizedBox(height: 8),
-            Text(
-              title,
-              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 4),
-            Text(
-              subtitle,
-              style: TextStyle(fontSize: 12, color: Colors.grey[600]),
-              textAlign: TextAlign.center,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  // Note: Item management is now handled through vendor dashboard
-  void _navigateToVendorDashboard() {
-    Navigator.pushNamed(context, '/vendor_dashboard');
   }
 }

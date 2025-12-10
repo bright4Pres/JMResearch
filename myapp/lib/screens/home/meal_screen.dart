@@ -1,51 +1,72 @@
 import 'package:flutter/material.dart';
+import 'package:myapp/services/vendor_kitchen_service.dart';
+import 'kitchen_menu_screen.dart';
 
 class MealScreen extends StatelessWidget {
-  const MealScreen({super.key});
+  MealScreen({super.key});
+
+  final VendorKitchenService _vendorService = VendorKitchenService();
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Meals', style: TextStyle(color: Colors.deepOrange)),
+        title: const Text(
+          'Full Meals',
+          style: TextStyle(color: Colors.deepOrange),
+        ),
         backgroundColor: Colors.white,
         toolbarHeight: 70,
+        iconTheme: const IconThemeData(color: Colors.deepOrange),
       ),
-      body: Center(
-        child: Column(
-          children: const [
-            SizedBox(height: 20),
-            Padding(
-              padding: EdgeInsets.all(20),
+      body: StreamBuilder<List<Kitchen>>(
+        stream: _vendorService.getAllKitchens(),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          }
+
+          if (snapshot.hasError) {
+            return Center(
               child: Text(
-                'Choose Your Kitchen',
-                style: TextStyle(fontSize: 24),
+                'Error loading kitchens: ${snapshot.error}',
+                style: const TextStyle(color: Colors.red),
               ),
-            ),
-            SizedBox(height: 8),
-            MealCard(
-              title: 'Red Plate',
-              subtitle:
-                  'Premium customizable meals with rice, viands, and sides',
-              badgeText: 'Campus Canteen',
-              badgeColor: Color.fromARGB(255, 255, 255, 35),
-              cornerTagText: 'Premium Kitchen',
-              cornerTagColor: Colors.red,
-              price: '₱120',
-              priceLabel: 'starting at',
-              image: 'assets/images/Meals.png',
-            ),
-            SizedBox(height: 20),
-            MealCard(
-              title: 'Silver Plate',
-              subtitle: 'Classic set meals with rice and main dish combos.',
-              badgeText: 'Best Value',
-              badgeColor: Colors.white,
-              cornerTagText: 'Premium Kitchen',
-              cornerTagColor: Colors.blueGrey,
-              price: '₱120',
-              priceLabel: 'starting at',
-              image: 'assets/images/Meals.png',
+            );
+          }
+
+          final kitchens = snapshot.data ?? [];
+
+          if (kitchens.isEmpty) {
+            return _emptyState('No kitchens offering meals yet.');
+          }
+
+          return ListView.builder(
+            padding: const EdgeInsets.all(16),
+            itemCount: kitchens.length,
+            itemBuilder: (context, index) {
+              final kitchen = kitchens[index];
+              return _KitchenMealCard(kitchen: kitchen);
+            },
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _emptyState(String message) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(Icons.restaurant_menu, size: 72, color: Colors.grey),
+            const SizedBox(height: 12),
+            Text(
+              message,
+              style: const TextStyle(fontSize: 16, color: Colors.grey),
+              textAlign: TextAlign.center,
             ),
           ],
         ),
@@ -54,137 +75,169 @@ class MealScreen extends StatelessWidget {
   }
 }
 
-class MealCard extends StatelessWidget {
-  final String title;
-  final String subtitle;
-  final String badgeText;
-  final Color badgeColor;
-  final String cornerTagText;
-  final Color cornerTagColor;
-  final String price;
-  final String priceLabel;
-  final String image;
+class _KitchenMealCard extends StatelessWidget {
+  const _KitchenMealCard({required this.kitchen});
 
-  const MealCard({
-    super.key,
-    required this.title,
-    required this.subtitle,
-    required this.badgeText,
-    required this.badgeColor,
-    required this.cornerTagText,
-    required this.cornerTagColor,
-    required this.price,
-    required this.priceLabel,
-    required this.image,
-  });
+  final Kitchen kitchen;
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
+    final vendorService = VendorKitchenService();
+
+    return InkWell(
       onTap: () {
-        // TODO: navigate to detail or menu list for this kitchen
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => KitchenMenuScreen(
+              kitchen: kitchen,
+              initialCategory: 'fullmeals',
+            ),
+          ),
+        );
       },
-      child: Container(
-        width: 330,
-        height: 180,
-        margin: const EdgeInsets.symmetric(horizontal: 0),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(20),
-          image: DecorationImage(image: AssetImage(image), fit: BoxFit.cover),
-        ),
-        child: Stack(
-          children: [
-            Positioned(
-              bottom: 60,
-              left: 20,
-              child: SizedBox(
-                width: 240,
-                height: 80,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      title,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 30,
-                      ),
+      child: Card(
+        margin: const EdgeInsets.only(bottom: 12),
+        elevation: 2,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    width: 48,
+                    height: 48,
+                    decoration: BoxDecoration(
+                      color: Colors.orange[50],
+                      borderRadius: BorderRadius.circular(12),
                     ),
-                    const SizedBox(height: 4),
-                    Text(
-                      subtitle,
-                      style: const TextStyle(color: Colors.white, fontSize: 14),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            Positioned(
-              top: 135,
-              left: 20,
-              child: Container(
-                width: 100,
-                height: 25,
-                decoration: BoxDecoration(
-                  color: badgeColor,
-                  borderRadius: BorderRadius.circular(15),
-                ),
-                alignment: Alignment.center,
-                child: Text(
-                  badgeText,
-                  style: TextStyle(
-                    color: badgeColor.computeLuminance() > 0.5
-                        ? Colors.black
-                        : Colors.white,
-                    fontSize: 10,
+                    child: const Icon(Icons.store, color: Colors.deepOrange),
                   ),
-                ),
-              ),
-            ),
-            Positioned(
-              top: 10,
-              left: 220,
-              child: Container(
-                width: 100,
-                height: 25,
-                decoration: BoxDecoration(
-                  color: cornerTagColor,
-                  borderRadius: BorderRadius.circular(15),
-                ),
-                alignment: Alignment.center,
-                child: Text(
-                  cornerTagText,
-                  style: const TextStyle(color: Colors.white, fontSize: 10),
-                ),
-              ),
-            ),
-            Positioned(
-              top: 100,
-              left: 220,
-              child: SizedBox(
-                width: 240,
-                height: 80,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      price,
-                      style: const TextStyle(
-                        color: Colors.white,
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          kitchen.name,
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          kitchen.description,
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: Colors.grey[700],
+                          ),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
+                    ),
+                  ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 4,
+                    ),
+                    decoration: BoxDecoration(
+                      color: kitchen.isActive
+                          ? Colors.green[100]
+                          : Colors.red[100],
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Text(
+                      kitchen.isActive ? 'OPEN' : 'CLOSED',
+                      style: TextStyle(
+                        fontSize: 10,
                         fontWeight: FontWeight.bold,
-                        fontSize: 30,
+                        color: kitchen.isActive
+                            ? Colors.green[700]
+                            : Colors.red[700],
                       ),
                     ),
-                    Text(
-                      priceLabel,
-                      style: const TextStyle(color: Colors.white, fontSize: 15),
-                    ),
-                  ],
-                ),
+                  ),
+                ],
               ),
-            ),
-          ],
+              const SizedBox(height: 12),
+              StreamBuilder<List<KitchenItem>>(
+                stream: vendorService.getItemsByKitchenAndCategory(
+                  kitchen.id,
+                  'fullmeals',
+                ),
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return const LinearProgressIndicator(minHeight: 2);
+                  }
+
+                  final items = snapshot.data ?? [];
+                  if (items.isEmpty) {
+                    return Text(
+                      'No full meals yet.',
+                      style: TextStyle(color: Colors.grey[600], fontSize: 12),
+                    );
+                  }
+
+                  final preview = items.take(3).toList();
+
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Full Meals',
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      ...preview.map(
+                        (item) => Padding(
+                          padding: const EdgeInsets.only(bottom: 6),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  item.name,
+                                  style: const TextStyle(fontSize: 13),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              Text(
+                                '₱${item.price.toStringAsFixed(2)}',
+                                style: const TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.deepOrange,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                      if (items.length > preview.length)
+                        Text(
+                          '+ ${items.length - preview.length} more',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.grey[600],
+                            fontStyle: FontStyle.italic,
+                          ),
+                        ),
+                    ],
+                  );
+                },
+              ),
+            ],
+          ),
         ),
       ),
     );

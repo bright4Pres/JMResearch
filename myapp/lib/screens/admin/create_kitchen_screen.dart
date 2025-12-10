@@ -1,8 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:image_picker/image_picker.dart';
-import 'dart:io';
 import '../../services/vendor_kitchen_service.dart';
-import '../../services/image_service.dart';
 import '../../services/user_service.dart';
 
 class CreateKitchenScreen extends StatefulWidget {
@@ -18,13 +15,8 @@ class _CreateKitchenScreenState extends State<CreateKitchenScreen> {
   final _descriptionController = TextEditingController();
 
   final VendorKitchenService _vendorService = VendorKitchenService();
-  final ImageService _imageService = ImageService();
   final UserService _userService = UserService();
-
-  XFile? _selectedImage;
   bool _isLoading = false;
-
-  bool get _hasSelectedImage => _selectedImage != null;
 
   @override
   void dispose() {
@@ -108,8 +100,6 @@ class _CreateKitchenScreenState extends State<CreateKitchenScreen> {
               ),
               const SizedBox(height: 24),
 
-              // Kitchen Image Upload
-              _buildImageUploadSection(),
               const SizedBox(height: 20),
 
               // Kitchen Name
@@ -186,123 +176,6 @@ class _CreateKitchenScreenState extends State<CreateKitchenScreen> {
     );
   }
 
-  Widget _buildImageUploadSection() {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.1),
-            blurRadius: 6,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(Icons.image, color: Colors.deepOrange),
-              const SizedBox(width: 8),
-              const Text(
-                'Kitchen Image',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.black87,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-
-          // Image Preview
-          Container(
-            height: 200,
-            width: double.infinity,
-            decoration: BoxDecoration(
-              color: Colors.grey[100],
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: Colors.grey[300]!),
-            ),
-            child: _buildImagePreview(),
-          ),
-          const SizedBox(height: 12),
-
-          // Upload Buttons
-          Row(
-            children: [
-              Expanded(
-                child: OutlinedButton.icon(
-                  onPressed: () => _pickImage(false),
-                  icon: const Icon(Icons.photo_library),
-                  label: const Text('Gallery'),
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: Colors.deepOrange,
-                    side: const BorderSide(color: Colors.deepOrange),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: OutlinedButton.icon(
-                  onPressed: () => _pickImage(true),
-                  icon: const Icon(Icons.camera_alt),
-                  label: const Text('Camera'),
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: Colors.deepOrange,
-                    side: const BorderSide(color: Colors.deepOrange),
-                  ),
-                ),
-              ),
-            ],
-          ),
-          if (_hasSelectedImage)
-            Padding(
-              padding: const EdgeInsets.only(top: 8),
-              child: TextButton.icon(
-                onPressed: _removeImage,
-                icon: const Icon(Icons.delete, color: Colors.red),
-                label: const Text(
-                  'Remove Image',
-                  style: TextStyle(color: Colors.red),
-                ),
-              ),
-            ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildImagePreview() {
-    if (_selectedImage != null) {
-      return ClipRRect(
-        borderRadius: BorderRadius.circular(8),
-        child: Image.file(
-          File(_selectedImage!.path),
-          fit: BoxFit.cover,
-          width: double.infinity,
-        ),
-      );
-    } else {
-      return Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(Icons.restaurant, size: 64, color: Colors.grey[400]),
-          const SizedBox(height: 8),
-          Text(
-            'add kitchen photo',
-            style: TextStyle(color: Colors.grey[600], fontSize: 16),
-          ),
-          const SizedBox(height: 4),
-        ],
-      );
-    }
-  }
-
   Widget _buildTextField({
     required TextEditingController controller,
     required String label,
@@ -346,21 +219,6 @@ class _CreateKitchenScreenState extends State<CreateKitchenScreen> {
     );
   }
 
-  void _pickImage(bool fromCamera) async {
-    final XFile? image = await _imageService.pickImage(fromCamera: fromCamera);
-    if (image != null) {
-      setState(() {
-        _selectedImage = image;
-      });
-    }
-  }
-
-  void _removeImage() {
-    setState(() {
-      _selectedImage = null;
-    });
-  }
-
   void _submitForm() async {
     if (!_formKey.currentState!.validate()) return;
 
@@ -374,15 +232,6 @@ class _CreateKitchenScreenState extends State<CreateKitchenScreen> {
       if (currentUser == null) {
         throw Exception('User not authenticated');
       }
-
-      String? imageUrl;
-      if (_selectedImage != null) {
-        imageUrl = await _imageService.uploadImage(_selectedImage!, 'kitchens');
-        if (imageUrl == null) {
-          throw Exception('Failed to upload image');
-        }
-      }
-
       if (!mounted) return;
 
       final kitchen = Kitchen(
@@ -391,7 +240,6 @@ class _CreateKitchenScreenState extends State<CreateKitchenScreen> {
         description: _descriptionController.text.trim(),
         ownerId: currentUser.uid,
         ownerName: currentUser.displayName ?? currentUser.email ?? 'Unknown',
-        imageUrl: imageUrl,
         createdAt: DateTime.now(),
       );
 

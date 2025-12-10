@@ -4,8 +4,5 @@
     "location": "asia-east2",
     "rules": "firebase/firestore.rules",
     "indexes": "firebase/firestore.indexes.json"
-  },
-  "storage": {
-    "rules": "firebase/storage.rules"
   }
 }
