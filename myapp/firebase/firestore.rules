@@ -2,21 +2,74 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
+    // Helper function to check if user is staff
+    function isStaff(uid) {
+      return exists(/databases/$(database)/documents/users/$(uid)) &&
+             get(/databases/$(database)/documents/users/$(uid)).data.get('isStaff', false) == true;
+    }
+
     match /users/{uid} {
       // Allow user to create their own profile document after authenticating
       allow create: if request.auth != null && request.auth.uid == uid;
 
-      // Allow read for owner; staff (custom claim) can list/read all
-      allow read: if request.auth != null && (request.auth.uid == uid || request.auth.token.isStaff == true);
-      allow list: if request.auth != null && request.auth.token.isStaff == true;
+      // Allow read for owner or staff users
+      allow read: if request.auth != null && 
+        (request.auth.uid == uid || isStaff(request.auth.uid));
+      
+      // Allow staff to list all users
+      allow list: if request.auth != null && isStaff(request.auth.uid);
 
-      // Allow updates by owner but prevent client writes to 'isStaff'
-      allow update: if request.auth != null
-                    && request.auth.uid == uid
-                    && !( 'isStaff' in request.resource.data );
+      // Allow updates by owner but prevent client writes to 'isStaff' unless user is staff
+      allow update: if request.auth != null &&
+        request.auth.uid == uid &&
+        (!('isStaff' in request.resource.data) || isStaff(request.auth.uid));
 
-      // Only admin (staff) can delete
-      allow delete: if request.auth != null && request.auth.token.isStaff == true;
+      // Only staff can delete users
+      allow delete: if request.auth != null && isStaff(request.auth.uid);
+    }
+
+    // Kitchens collection - for vendor-owned kitchens
+    match /kitchens/{kitchenId} {
+      // Allow all authenticated users to read kitchens (for browsing)
+      allow read: if request.auth != null;
+      
+      // Allow all authenticated users to list kitchens (for browsing)
+      allow list: if request.auth != null;
+      
+      // Only staff can create kitchens, and they must be the owner
+      allow create: if request.auth != null && 
+        isStaff(request.auth.uid) &&
+        request.resource.data.ownerId == request.auth.uid;
+        
+      // Only the kitchen owner can update their kitchen
+      allow update: if request.auth != null && 
+        resource.data.ownerId == request.auth.uid;
+        
+      // Only the kitchen owner can delete their kitchen
+      allow delete: if request.auth != null && 
+        resource.data.ownerId == request.auth.uid;
+    }
+
+    // Kitchen items collection - for items within kitchens
+    match /kitchen_items/{itemId} {
+      // Allow all authenticated users to read kitchen items (for menu display)
+      allow read: if request.auth != null;
+      
+      // Allow all authenticated users to list kitchen items (for menu display)
+      allow list: if request.auth != null;
+      
+      // Only staff can create kitchen items, and they must be the owner
+      allow create: if request.auth != null && 
+        isStaff(request.auth.uid) &&
+        request.resource.data.ownerId == request.auth.uid;
+        
+      // Only the item owner can update their items
+      allow update: if request.auth != null && 
+        resource.data.ownerId == request.auth.uid;
+        
+      // Only the item owner can delete their items
+      allow delete: if request.auth != null && 
+        resource.data.ownerId == request.auth.uid;
     }
 
     // Add other rules as needed
