@@ -57,7 +57,7 @@ class _KitchenDetailScreenState extends State<KitchenDetailScreen>
       ),
       body: Column(
         children: [
-          // Kitchen Info Header
+          // adds the kitchen header for uniform appbar
           _buildKitchenHeader(),
           // Items Tabs
           Expanded(
@@ -98,7 +98,7 @@ class _KitchenDetailScreenState extends State<KitchenDetailScreen>
       child: Row(
         children: [
           const SizedBox(width: 16),
-          // Kitchen Details
+          // buids kitchen details/description
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -118,28 +118,6 @@ class _KitchenDetailScreenState extends State<KitchenDetailScreen>
                   overflow: TextOverflow.ellipsis,
                 ),
                 const SizedBox(height: 8),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 8,
-                    vertical: 4,
-                  ),
-                  decoration: BoxDecoration(
-                    color: widget.kitchen.isActive
-                        ? Colors.green[100]
-                        : Colors.red[100],
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Text(
-                    widget.kitchen.isActive ? 'ACTIVE' : 'INACTIVE',
-                    style: TextStyle(
-                      fontSize: 10,
-                      fontWeight: FontWeight.bold,
-                      color: widget.kitchen.isActive
-                          ? Colors.green[700]
-                          : Colors.red[700],
-                    ),
-                  ),
-                ),
               ],
             ),
           ),
@@ -482,7 +460,7 @@ class _KitchenDetailScreenState extends State<KitchenDetailScreen>
                           child: OutlinedButton(
                             onPressed: () =>
                                 _setStatus(order.id, 'ready for pick up'),
-                            child: const Text('Set Ready for Pick Up'),
+                            child: const Text('pick up now'),
                           ),
                         ),
                         const SizedBox(width: 8),
@@ -493,7 +471,7 @@ class _KitchenDetailScreenState extends State<KitchenDetailScreen>
                             ),
                             onPressed: () => _setStatus(order.id, 'finished'),
                             child: const Text(
-                              'Mark Finished',
+                              'mark as finisnihedr',
                               style: TextStyle(color: Colors.white),
                             ),
                           ),

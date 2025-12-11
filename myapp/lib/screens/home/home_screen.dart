@@ -242,6 +242,10 @@ class _HomeScreenState extends State<HomeScreen> {
                     title: 'Order History',
                     onTap: () {
                       Navigator.pop(context);
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (context) => OrdersScreen()),
+                      );
                     },
                   ),
                   _buildDrawerItem(
@@ -251,22 +255,6 @@ class _HomeScreenState extends State<HomeScreen> {
                       Navigator.pop(context);
                     },
                   ),
-                  if (appUser?.isStaff == true) ...[
-                    Divider(color: Colors.orange[200], thickness: 1),
-                    _buildDrawerItem(
-                      icon: Icons.store_outlined,
-                      title: 'Vendor Dashboard',
-                      onTap: () {
-                        Navigator.pop(context);
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => const VendorDashboardScreen(),
-                          ),
-                        );
-                      },
-                    ),
-                  ],
                   Divider(color: Colors.orange[200], thickness: 1),
                   _buildDrawerItem(
                     icon: Icons.settings_outlined,

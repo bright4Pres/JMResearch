@@ -93,7 +93,7 @@ class _AddItemScreenState extends State<AddItemScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // Item Name
+              // item field @ add item section
               _buildTextField(
                 controller: _nameController,
                 label: 'Item Name',
@@ -107,7 +107,7 @@ class _AddItemScreenState extends State<AddItemScreen> {
               ),
               const SizedBox(height: 16),
 
-              // Description
+              // description fielfd
               _buildTextField(
                 controller: _descriptionController,
                 label: 'Description',
@@ -122,7 +122,7 @@ class _AddItemScreenState extends State<AddItemScreen> {
               ),
               const SizedBox(height: 16),
 
-              // Price
+              // same shit, but price
               _buildTextField(
                 controller: _priceController,
                 label: 'Price (₱)',
@@ -141,7 +141,6 @@ class _AddItemScreenState extends State<AddItemScreen> {
               ),
               const SizedBox(height: 32),
 
-              // Submit Button
               ElevatedButton(
                 onPressed: _isLoading ? null : _submitForm,
                 style: ElevatedButton.styleFrom(
@@ -167,6 +166,7 @@ class _AddItemScreenState extends State<AddItemScreen> {
     );
   }
 
+  // helper function to build text fields, avoids repetitive building functions
   Widget _buildTextField({
     required TextEditingController controller,
     required String label,

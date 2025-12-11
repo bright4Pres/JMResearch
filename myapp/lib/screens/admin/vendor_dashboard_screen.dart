@@ -39,7 +39,7 @@ class _VendorDashboardScreenState extends State<VendorDashboardScreen> {
       backgroundColor: const Color.fromARGB(255, 255, 236, 191),
       appBar: AppBar(
         title: const Text(
-          'My Vendor Dashboard',
+          'vendor dashboard',
           style: TextStyle(
             color: Colors.deepOrange,
             fontWeight: FontWeight.bold,
@@ -83,6 +83,7 @@ class _VendorDashboardScreenState extends State<VendorDashboardScreen> {
     );
   }
 
+  // when no kitchen is under acount, builds empty state
   Widget _buildEmptyState() {
     return Center(
       child: Padding(
@@ -130,6 +131,7 @@ class _VendorDashboardScreenState extends State<VendorDashboardScreen> {
     );
   }
 
+  // this now has kitchens
   Widget _buildKitchensList(List<Kitchen> kitchens) {
     return ListView.builder(
       padding: const EdgeInsets.all(16),
@@ -145,6 +147,7 @@ class _VendorDashboardScreenState extends State<VendorDashboardScreen> {
     );
   }
 
+  // this just for uniformity purposes, same app bar n stuyff
   Widget _buildHeader(int kitchenCount) {
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
@@ -169,7 +172,7 @@ class _VendorDashboardScreenState extends State<VendorDashboardScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'My Kitchens',
+                  'Total kitchens under account',
                   style: TextStyle(
                     fontSize: 20,
                     fontWeight: FontWeight.bold,
@@ -184,26 +187,12 @@ class _VendorDashboardScreenState extends State<VendorDashboardScreen> {
               ],
             ),
           ),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-            decoration: BoxDecoration(
-              color: Colors.green[100],
-              borderRadius: BorderRadius.circular(16),
-            ),
-            child: Text(
-              'VENDOR',
-              style: TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.bold,
-                color: Colors.green[700],
-              ),
-            ),
-          ),
         ],
       ),
     );
   }
 
+  // helper function for building kitchen cards / dynamic kitchens
   Widget _buildKitchenCard(Kitchen kitchen) {
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
@@ -259,20 +248,11 @@ class _VendorDashboardScreenState extends State<VendorDashboardScreen> {
                           size: 12,
                         ),
                         const SizedBox(width: 4),
-                        Text(
-                          kitchen.isActive ? 'Active' : 'Inactive',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: kitchen.isActive ? Colors.green : Colors.red,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
                       ],
                     ),
                   ],
                 ),
               ),
-              // Action Button
               Icon(Icons.arrow_forward_ios, color: Colors.grey[400], size: 16),
             ],
           ),
