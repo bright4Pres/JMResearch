@@ -1,26 +1,20 @@
 // ============================================================================
-// kitchen_detail_screen.dart - Staff/Owner Kitchen Management
+// kitchen_detail_screen.dart - Staff/Owner Kitchen Management (REDESIGNED)
 // ============================================================================
-// this is where staff members manage their kitchen - add items, view orders,
-// update order statuses, etc. has 5 tabs: Full Meals, Snacks, Pending, Ready,
-// Finished. the first two tabs show menu items, the last three show orders
-// filtered by status.
+// Beautiful kitchen management screen with modern tabs, cards, and animations
+// Features: gradient header, animated lists, status badges, order management
 // ============================================================================
 
 import 'package:flutter/material.dart';
 import '../../services/vendor_kitchen_service.dart';
+import '../../theme/app_theme.dart';
 import 'add_item_screen.dart';
 import 'analytics_screen.dart';
-
-// app-wide colors (DRY = Don't Repeat Yourself)
-const _kBackgroundColor = Color.fromARGB(255, 255, 236, 191);
-const _kAccentColor = Colors.deepOrange;
 
 class KitchenDetailScreen extends StatefulWidget {
   final Kitchen kitchen;
 
-  const KitchenDetailScreen({Key? key, required this.kitchen})
-    : super(key: key);
+  const KitchenDetailScreen({super.key, required this.kitchen});
 
   @override
   State<KitchenDetailScreen> createState() => _KitchenDetailScreenState();
@@ -28,20 +22,17 @@ class KitchenDetailScreen extends StatefulWidget {
 
 class _KitchenDetailScreenState extends State<KitchenDetailScreen>
     with SingleTickerProviderStateMixin {
-  // TabController needs vsync for smooth animations
   late TabController _tabController;
   final VendorKitchenService _vendorService = VendorKitchenService();
 
   @override
   void initState() {
     super.initState();
-    // 5 tabs total: 2 for menu items + 3 for order statuses
     _tabController = TabController(length: 5, vsync: this);
   }
 
   @override
   void dispose() {
-    // always clean up controllers!
     _tabController.dispose();
     super.dispose();
   }
@@ -49,79 +40,568 @@ class _KitchenDetailScreenState extends State<KitchenDetailScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: _kBackgroundColor,
-      appBar: AppBar(
-        title: Text(
-          widget.kitchen.name,
-          style: const TextStyle(
-            color: _kAccentColor,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        backgroundColor: Colors.white,
-        iconTheme: const IconThemeData(color: _kAccentColor),
-        actions: [
-          // pickup locations button
-          IconButton(
-            icon: const Icon(Icons.location_on),
-            tooltip: 'Pickup Locations',
-            onPressed: () => _showPickupLocationsDialog(),
-          ),
-          // analytics button in top right
-          IconButton(
-            icon: const Icon(Icons.analytics),
-            tooltip: 'Analytics',
-            onPressed: () => _navigateToAnalytics(),
-          ),
-        ],
-        // isScrollable allows tabs to scroll if they don't fit
-        bottom: TabBar(
+      backgroundColor: AppColors.background,
+      body: NestedScrollView(
+        headerSliverBuilder: (context, innerBoxIsScrolled) => [_buildAppBar()],
+        body: TabBarView(
           controller: _tabController,
-          labelColor: _kAccentColor,
-          unselectedLabelColor: Colors.grey,
-          indicatorColor: _kAccentColor,
-          isScrollable: true, // tabs can scroll horizontally
-          tabs: const [
-            Tab(icon: Icon(Icons.restaurant), text: 'Full Meals'),
-            Tab(icon: Icon(Icons.fastfood), text: 'Snacks'),
-            Tab(icon: Icon(Icons.timelapse), text: 'Pending'),
-            Tab(icon: Icon(Icons.local_shipping), text: 'Ready'),
-            Tab(icon: Icon(Icons.check_circle), text: 'Finished'),
+          children: [
+            _buildItemsList('fullmeals'),
+            _buildItemsList('snacks'),
+            _buildOrdersList(statusFilter: 'pending'),
+            _buildOrdersList(statusFilter: 'ready for pick up'),
+            _buildOrdersList(statusFilter: 'finished'),
           ],
         ),
       ),
-      body: Column(
-        children: [
-          // kitchen header card at top
-          _buildKitchenHeader(),
-          // tab content takes up remaining space
-          Expanded(
-            child: TabBarView(
-              controller: _tabController,
-              children: [
-                // menu item tabs
-                _buildItemsList('fullmeals'),
-                _buildItemsList('snacks'),
-                // order tabs filtered by status
-                _buildOrdersList(statusFilter: 'pending'),
-                _buildOrdersList(statusFilter: 'ready for pick up'),
-                _buildOrdersList(statusFilter: 'finished'),
-              ],
+      floatingActionButton: _buildFAB(),
+    );
+  }
+
+  // --------------------------------------------------------------------------
+  // App Bar with Gradient and Tabs
+  // --------------------------------------------------------------------------
+  Widget _buildAppBar() {
+    return SliverAppBar(
+      expandedHeight: 200,
+      floating: false,
+      pinned: true,
+      elevation: 0,
+      backgroundColor: AppColors.primary,
+      leading: IconButton(
+        icon: Container(
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: Colors.white.withValues(alpha: 0.2),
+            borderRadius: AppRadius.smallRadius,
+          ),
+          child: const Icon(
+            Icons.arrow_back_ios_new,
+            color: Colors.white,
+            size: 18,
+          ),
+        ),
+        onPressed: () => Navigator.pop(context),
+      ),
+      actions: [
+        IconButton(
+          icon: Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.2),
+              borderRadius: AppRadius.smallRadius,
+            ),
+            child: const Icon(Icons.location_on, color: Colors.white, size: 20),
+          ),
+          tooltip: 'Pickup Locations',
+          onPressed: _showPickupLocationsDialog,
+        ),
+        IconButton(
+          icon: Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.2),
+              borderRadius: AppRadius.smallRadius,
+            ),
+            child: const Icon(Icons.analytics, color: Colors.white, size: 20),
+          ),
+          tooltip: 'Analytics',
+          onPressed: _navigateToAnalytics,
+        ),
+        const SizedBox(width: 8),
+      ],
+      flexibleSpace: FlexibleSpaceBar(
+        background: Container(
+          decoration: const BoxDecoration(gradient: AppColors.warmGradient),
+          child: SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(20, 50, 20, 80),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // kitchen icon
+                  Container(
+                    width: 64,
+                    height: 64,
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: AppRadius.mediumRadius,
+                      boxShadow: AppShadows.medium,
+                    ),
+                    child: const Icon(
+                      Icons.store_rounded,
+                      color: AppColors.primary,
+                      size: 32,
+                    ),
+                  ),
+                  const SizedBox(width: AppSpacing.md),
+                  // kitchen info
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          widget.kitchen.name,
+                          style: AppTypography.h2.copyWith(color: Colors.white),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          widget.kitchen.description,
+                          style: AppTypography.bodyMedium.copyWith(
+                            color: Colors.white.withValues(alpha: 0.85),
+                          ),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        const SizedBox(height: AppSpacing.sm),
+                        StatusBadge(
+                          status: widget.kitchen.isActive ? 'Open' : 'Closed',
+                          isLarge: true,
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
-        ],
+        ),
       ),
-      // FAB to add new menu items
-      floatingActionButton: FloatingActionButton(
-        onPressed: _navigateToAddItem,
-        backgroundColor: _kAccentColor,
-        child: const Icon(Icons.add, color: Colors.white),
+      bottom: PreferredSize(
+        preferredSize: const Size.fromHeight(56),
+        child: Container(
+          margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+          decoration: BoxDecoration(
+            color: Colors.white.withValues(alpha: 0.2),
+            borderRadius: AppRadius.largeRadius,
+          ),
+          child: TabBar(
+            controller: _tabController,
+            labelColor: Colors.white,
+            unselectedLabelColor: Colors.white.withValues(alpha: 0.6),
+            indicatorSize: TabBarIndicatorSize.tab,
+            dividerColor: Colors.transparent,
+            indicator: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.3),
+              borderRadius: AppRadius.mediumRadius,
+            ),
+            isScrollable: true,
+            labelStyle: AppTypography.caption.copyWith(
+              fontWeight: FontWeight.w600,
+            ),
+            tabs: const [
+              Tab(icon: Icon(Icons.restaurant, size: 18), text: 'Meals'),
+              Tab(icon: Icon(Icons.fastfood, size: 18), text: 'Snacks'),
+              Tab(icon: Icon(Icons.schedule, size: 18), text: 'Pending'),
+              Tab(icon: Icon(Icons.delivery_dining, size: 18), text: 'Ready'),
+              Tab(icon: Icon(Icons.check_circle, size: 18), text: 'Done'),
+            ],
+          ),
+        ),
       ),
     );
   }
 
   // --------------------------------------------------------------------------
-  // navigation helpers - keep the build method clean
+  // Menu Items List
+  // --------------------------------------------------------------------------
+  Widget _buildItemsList(String category) {
+    return StreamBuilder<List<KitchenItem>>(
+      stream: _vendorService.getItemsByKitchenAndCategory(
+        widget.kitchen.id,
+        category,
+      ),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: AppLoader());
+        }
+
+        if (snapshot.hasError) {
+          return EmptyState(
+            icon: Icons.error_outline,
+            title: 'Error loading items',
+            subtitle: '${snapshot.error}',
+          );
+        }
+
+        final items = snapshot.data ?? [];
+
+        if (items.isEmpty) {
+          return EmptyState(
+            icon: category == 'fullmeals' ? Icons.restaurant : Icons.fastfood,
+            title: 'No ${category == 'fullmeals' ? 'meals' : 'snacks'} yet',
+            subtitle: 'Tap + to add your first item',
+          );
+        }
+
+        return ListView.builder(
+          padding: const EdgeInsets.all(AppSpacing.md),
+          itemCount: items.length,
+          itemBuilder: (context, index) => _buildItemCard(items[index], index),
+        );
+      },
+    );
+  }
+
+  Widget _buildItemCard(KitchenItem item, int index) {
+    return TweenAnimationBuilder<double>(
+      tween: Tween(begin: 0.0, end: 1.0),
+      duration: Duration(milliseconds: 300 + (index * 50)),
+      curve: Curves.easeOutCubic,
+      builder: (context, value, child) {
+        return Transform.translate(
+          offset: Offset(20 * (1 - value), 0),
+          child: Opacity(opacity: value, child: child),
+        );
+      },
+      child: Container(
+        margin: const EdgeInsets.only(bottom: AppSpacing.md),
+        decoration: AppDecorations.cardElevated,
+        child: Padding(
+          padding: const EdgeInsets.all(AppSpacing.md),
+          child: Row(
+            children: [
+              // category icon
+              Container(
+                width: 56,
+                height: 56,
+                decoration: BoxDecoration(
+                  gradient: AppColors.warmGradient,
+                  borderRadius: AppRadius.mediumRadius,
+                ),
+                child: Icon(
+                  item.category == 'fullmeals'
+                      ? Icons.restaurant
+                      : Icons.fastfood,
+                  color: Colors.white,
+                  size: 26,
+                ),
+              ),
+              const SizedBox(width: AppSpacing.md),
+              // item info
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(item.name, style: AppTypography.h4),
+                    const SizedBox(height: 4),
+                    Text(
+                      item.description,
+                      style: AppTypography.bodySmall,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      '₱${item.price.toStringAsFixed(2)}',
+                      style: AppTypography.price,
+                    ),
+                  ],
+                ),
+              ),
+              // actions
+              Column(
+                children: [
+                  _buildActionButton(
+                    Icons.edit_outlined,
+                    AppColors.primary,
+                    () => _editItem(item),
+                  ),
+                  const SizedBox(height: 4),
+                  _buildActionButton(
+                    Icons.delete_outline,
+                    AppColors.error,
+                    () => _deleteItem(item),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildActionButton(IconData icon, Color color, VoidCallback onTap) {
+    return Material(
+      color: color.withValues(alpha: 0.1),
+      borderRadius: AppRadius.smallRadius,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: AppRadius.smallRadius,
+        child: Padding(
+          padding: const EdgeInsets.all(8),
+          child: Icon(icon, color: color, size: 20),
+        ),
+      ),
+    );
+  }
+
+  // --------------------------------------------------------------------------
+  // Orders List
+  // --------------------------------------------------------------------------
+  Widget _buildOrdersList({required String statusFilter}) {
+    return StreamBuilder<List<KitchenOrder>>(
+      stream: _vendorService.getOrdersByKitchen(widget.kitchen.id),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: AppLoader());
+        }
+
+        if (snapshot.hasError) {
+          return EmptyState(
+            icon: Icons.error_outline,
+            title: 'Error loading orders',
+            subtitle: '${snapshot.error}',
+          );
+        }
+
+        final allOrders = snapshot.data ?? [];
+        final orders = _filterOrdersByStatus(allOrders, statusFilter);
+
+        if (orders.isEmpty) {
+          return _buildEmptyOrdersState(statusFilter);
+        }
+
+        return ListView.builder(
+          padding: const EdgeInsets.all(AppSpacing.md),
+          itemCount: orders.length,
+          itemBuilder: (context, index) =>
+              _buildOrderCard(orders[index], index),
+        );
+      },
+    );
+  }
+
+  List<KitchenOrder> _filterOrdersByStatus(
+    List<KitchenOrder> orders,
+    String statusFilter,
+  ) {
+    return orders.where((order) {
+      final status = order.status.toLowerCase();
+      if (statusFilter == 'pending') {
+        return status == 'pending' || status.isEmpty;
+      }
+      return status == statusFilter;
+    }).toList();
+  }
+
+  Widget _buildEmptyOrdersState(String statusFilter) {
+    final (icon, title, subtitle) = switch (statusFilter) {
+      'pending' => (
+        Icons.schedule,
+        'No pending orders',
+        'New orders will appear here',
+      ),
+      'ready for pick up' => (
+        Icons.delivery_dining,
+        'Nothing ready',
+        'Orders ready for pickup appear here',
+      ),
+      _ => (
+        Icons.check_circle,
+        'No completed orders',
+        'Finished orders will be shown here',
+      ),
+    };
+
+    return EmptyState(icon: icon, title: title, subtitle: subtitle);
+  }
+
+  Widget _buildOrderCard(KitchenOrder order, int index) {
+    final isPending =
+        order.status.toLowerCase() == 'pending' || order.status.isEmpty;
+
+    return TweenAnimationBuilder<double>(
+      tween: Tween(begin: 0.0, end: 1.0),
+      duration: Duration(milliseconds: 300 + (index * 50)),
+      curve: Curves.easeOutCubic,
+      builder: (context, value, child) {
+        return Transform.translate(
+          offset: Offset(0, 20 * (1 - value)),
+          child: Opacity(opacity: value, child: child),
+        );
+      },
+      child: Container(
+        margin: const EdgeInsets.only(bottom: AppSpacing.md),
+        decoration: AppDecorations.cardElevated,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // header
+            Container(
+              padding: const EdgeInsets.all(AppSpacing.md),
+              decoration: BoxDecoration(
+                color: AppColors.primary.withValues(alpha: 0.05),
+                borderRadius: const BorderRadius.vertical(
+                  top: Radius.circular(AppRadius.lg),
+                ),
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    width: 44,
+                    height: 44,
+                    decoration: BoxDecoration(
+                      gradient: AppColors.warmGradient,
+                      borderRadius: AppRadius.smallRadius,
+                    ),
+                    child: const Icon(
+                      Icons.person,
+                      color: Colors.white,
+                      size: 22,
+                    ),
+                  ),
+                  const SizedBox(width: AppSpacing.md),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          order.customerName.isEmpty
+                              ? 'Guest'
+                              : order.customerName,
+                          style: AppTypography.h4,
+                        ),
+                        Row(
+                          children: [
+                            Icon(
+                              Icons.location_on,
+                              size: 14,
+                              color: AppColors.textHint,
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              order.pickupLocation,
+                              style: AppTypography.caption,
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      Text(
+                        '₱${order.total.toStringAsFixed(2)}',
+                        style: AppTypography.price,
+                      ),
+                      StatusBadge(
+                        status: order.status.isEmpty ? 'pending' : order.status,
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            // items
+            Padding(
+              padding: const EdgeInsets.all(AppSpacing.md),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Order Items', style: AppTypography.caption),
+                  const SizedBox(height: AppSpacing.sm),
+                  ...order.items.map(
+                    (item) => Padding(
+                      padding: const EdgeInsets.only(bottom: 4),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Row(
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 8,
+                                  vertical: 2,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: AppColors.primary.withValues(
+                                    alpha: 0.1,
+                                  ),
+                                  borderRadius: AppRadius.smallRadius,
+                                ),
+                                child: Text(
+                                  '${item.qty}x',
+                                  style: AppTypography.caption.copyWith(
+                                    color: AppColors.primary,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              Text(item.name, style: AppTypography.bodyMedium),
+                            ],
+                          ),
+                          Text(
+                            '₱${(item.price * item.qty).toStringAsFixed(2)}',
+                            style: AppTypography.bodyMedium,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: AppSpacing.md),
+                  // action buttons
+                  if (isPending ||
+                      order.status.toLowerCase() == 'ready for pick up')
+                    Row(
+                      children: [
+                        if (isPending) ...[
+                          Expanded(
+                            child: OutlinedButton.icon(
+                              style: AppButtons.secondary,
+                              onPressed: () =>
+                                  _setStatus(order.id, 'ready for pick up'),
+                              icon: const Icon(Icons.delivery_dining, size: 18),
+                              label: const Text('Ready'),
+                            ),
+                          ),
+                          const SizedBox(width: AppSpacing.sm),
+                        ],
+                        Expanded(
+                          child: ElevatedButton.icon(
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppColors.success,
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(vertical: 12),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: AppRadius.smallRadius,
+                              ),
+                            ),
+                            onPressed: () => _setStatus(order.id, 'finished'),
+                            icon: const Icon(Icons.check_circle, size: 18),
+                            label: const Text('Done'),
+                          ),
+                        ),
+                      ],
+                    ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // --------------------------------------------------------------------------
+  // FAB
+  // --------------------------------------------------------------------------
+  Widget _buildFAB() {
+    return FloatingActionButton(
+      onPressed: _navigateToAddItem,
+      backgroundColor: AppColors.primary,
+      child: const Icon(Icons.add, color: Colors.white),
+    );
+  }
+
+  // --------------------------------------------------------------------------
+  // Navigation & Actions
   // --------------------------------------------------------------------------
   void _navigateToAnalytics() {
     Navigator.push(
@@ -132,25 +612,7 @@ class _KitchenDetailScreenState extends State<KitchenDetailScreen>
     );
   }
 
-  // --------------------------------------------------------------------------
-  // shows dialog to manage pickup locations for this kitchen
-  // sellers can add/remove their own custom pickup spots here
-  // --------------------------------------------------------------------------
-  void _showPickupLocationsDialog() {
-    // we need a stateful dialog, so we create a separate widget
-    showDialog(
-      context: context,
-      builder: (ctx) => _PickupLocationsDialog(
-        kitchenId: widget.kitchen.id,
-        initialLocations: widget.kitchen.pickupLocations,
-        vendorService: _vendorService,
-      ),
-    );
-  }
-
   void _navigateToAddItem() {
-    // figure out which category based on current tab
-    // only makes sense for first 2 tabs (menu items)
     final currentTabIndex = _tabController.index;
     final category = currentTabIndex == 0 ? 'fullmeals' : 'snacks';
     final displayName = currentTabIndex == 0 ? 'Full Meals' : 'Snacks';
@@ -167,197 +629,6 @@ class _KitchenDetailScreenState extends State<KitchenDetailScreen>
     );
   }
 
-  // --------------------------------------------------------------------------
-  // kitchen header - shows name and description
-  // --------------------------------------------------------------------------
-  Widget _buildKitchenHeader() {
-    return Container(
-      margin: const EdgeInsets.all(16),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.1),
-            blurRadius: 6,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  widget.kitchen.name,
-                  style: const TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  widget.kitchen.description,
-                  style: TextStyle(fontSize: 14, color: Colors.grey[600]),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // --------------------------------------------------------------------------
-  // builds list of menu items for a category (fullmeals or snacks)
-  // StreamBuilder means list updates automatically when firebase changes
-  // --------------------------------------------------------------------------
-  Widget _buildItemsList(String category) {
-    return StreamBuilder<List<KitchenItem>>(
-      stream: _vendorService.getItemsByKitchenAndCategory(
-        widget.kitchen.id,
-        category,
-      ),
-      builder: (context, snapshot) {
-        // loading state
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator());
-        }
-
-        // error state
-        if (snapshot.hasError) {
-          return Center(
-            child: Text(
-              'Error: ${snapshot.error}',
-              style: const TextStyle(color: Colors.red),
-            ),
-          );
-        }
-
-        final items = snapshot.data ?? [];
-
-        // empty state - show helpful message
-        if (items.isEmpty) {
-          return _buildEmptyItemsState(category);
-        }
-
-        // got items - build the list
-        return ListView.builder(
-          padding: const EdgeInsets.all(16),
-          itemCount: items.length,
-          itemBuilder: (context, index) => _buildItemCard(items[index]),
-        );
-      },
-    );
-  }
-
-  // --------------------------------------------------------------------------
-  // empty state for menu items tab
-  // --------------------------------------------------------------------------
-  Widget _buildEmptyItemsState(String category) {
-    final isFullMeals = category == 'fullmeals';
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(
-            isFullMeals ? Icons.restaurant : Icons.fastfood,
-            size: 64,
-            color: Colors.grey[400],
-          ),
-          const SizedBox(height: 16),
-          Text(
-            'No ${isFullMeals ? 'full meals' : 'snacks'} available',
-            style: TextStyle(
-              fontSize: 18,
-              color: Colors.grey[600],
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'Tap the + button to add your first ${isFullMeals ? 'meal' : 'snack'}',
-            style: TextStyle(fontSize: 14, color: Colors.grey[500]),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // --------------------------------------------------------------------------
-  // single item card with edit/delete buttons
-  // --------------------------------------------------------------------------
-  Widget _buildItemCard(KitchenItem item) {
-    return Card(
-      margin: const EdgeInsets.only(bottom: 12),
-      elevation: 3,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: Padding(
-        padding: const EdgeInsets.all(12),
-        child: Row(
-          children: [
-            const SizedBox(width: 12),
-            // item info
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    item.name,
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    item.description,
-                    style: TextStyle(fontSize: 14, color: Colors.grey[600]),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    '₱${item.price.toStringAsFixed(2)}',
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: _kAccentColor,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            // action buttons
-            Column(
-              children: [
-                IconButton(
-                  onPressed: () => _editItem(item),
-                  icon: const Icon(Icons.edit, color: Colors.blue),
-                  tooltip: 'Edit',
-                ),
-                IconButton(
-                  onPressed: () => _deleteItem(item),
-                  icon: const Icon(Icons.delete, color: Colors.red),
-                  tooltip: 'Delete',
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  // --------------------------------------------------------------------------
-  // edit item - navigates to add item screen with the item pre-filled
-  // --------------------------------------------------------------------------
   void _editItem(KitchenItem item) {
     Navigator.push(
       context,
@@ -368,287 +639,135 @@ class _KitchenDetailScreenState extends State<KitchenDetailScreen>
           categoryDisplayName: item.category == 'fullmeals'
               ? 'Full Meals'
               : 'Snacks',
-          editingItem: item, // pass the item to edit
+          editingItem: item,
         ),
       ),
     );
   }
 
-  // --------------------------------------------------------------------------
-  // delete item with confirmation dialog
-  // always confirm before deleting - users hate accidental deletes
-  // --------------------------------------------------------------------------
   void _deleteItem(KitchenItem item) {
     showDialog(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Delete Item'),
-        content: Text('Are you sure you want to delete "${item.name}"?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () async {
-              Navigator.of(ctx).pop();
-              final success = await _vendorService.deleteKitchenItem(item.id);
-              if (mounted) {
-                _showSnackBar(
-                  success
-                      ? 'Item deleted successfully'
-                      : 'Failed to delete item',
-                  success,
-                );
-              }
-            },
-            child: const Text('Delete', style: TextStyle(color: Colors.red)),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // --------------------------------------------------------------------------
-  // builds order list filtered by status
-  // shows customer name, order items, total, and status update buttons
-  // --------------------------------------------------------------------------
-  Widget _buildOrdersList({required String statusFilter}) {
-    return StreamBuilder<List<KitchenOrder>>(
-      stream: _vendorService.getOrdersByKitchen(widget.kitchen.id),
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator());
-        }
-
-        if (snapshot.hasError) {
-          return Center(
-            child: Text(
-              'Error: ${snapshot.error}',
-              style: const TextStyle(color: Colors.red),
-            ),
-          );
-        }
-
-        // filter orders based on which tab we're on
-        final allOrders = snapshot.data ?? [];
-        final orders = _filterOrdersByStatus(allOrders, statusFilter);
-
-        if (orders.isEmpty) {
-          return _buildEmptyOrdersState(statusFilter);
-        }
-
-        return ListView.separated(
-          padding: const EdgeInsets.all(16),
-          itemCount: orders.length,
-          separatorBuilder: (_, __) => const SizedBox(height: 12),
-          itemBuilder: (context, index) => _buildOrderCard(orders[index]),
-        );
-      },
-    );
-  }
-
-  // --------------------------------------------------------------------------
-  // filter orders - treat empty status as 'pending' for backwards compat
-  // --------------------------------------------------------------------------
-  List<KitchenOrder> _filterOrdersByStatus(
-    List<KitchenOrder> orders,
-    String statusFilter,
-  ) {
-    return orders.where((order) {
-      final status = order.status.toLowerCase();
-      if (statusFilter == 'pending') {
-        return status == 'pending' || status.isEmpty;
-      }
-      return status == statusFilter;
-    }).toList();
-  }
-
-  // --------------------------------------------------------------------------
-  // empty state for orders tab
-  // --------------------------------------------------------------------------
-  Widget _buildEmptyOrdersState(String statusFilter) {
-    final (icon, message) = switch (statusFilter) {
-      'pending' => (Icons.timelapse, 'No pending orders'),
-      'ready for pick up' => (
-        Icons.local_shipping,
-        'No orders ready for pickup',
-      ),
-      _ => (Icons.check_circle, 'No finished orders yet'),
-    };
-
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(icon, size: 64, color: Colors.grey),
-          const SizedBox(height: 12),
-          Text(message, style: const TextStyle(color: Colors.grey)),
-        ],
-      ),
-    );
-  }
-
-  // --------------------------------------------------------------------------
-  // order card - shows all order details + status update buttons
-  // --------------------------------------------------------------------------
-  Widget _buildOrderCard(KitchenOrder order) {
-    final isPending =
-        order.status.toLowerCase() == 'pending' || order.status.isEmpty;
-    final status = order.status.isEmpty
-        ? 'PENDING'
-        : order.status.toUpperCase();
-    final statusBg = isPending ? Colors.orange[100] : Colors.green[100];
-    final statusFg = isPending ? Colors.orange[800] : Colors.green[800];
-
-    return Card(
-      elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: Padding(
-        padding: const EdgeInsets.all(14),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // header row: customer name + total
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      order.customerName.isEmpty ? 'Guest' : order.customerName,
-                      style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                    const SizedBox(height: 6),
-                    // status badge
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 10,
-                        vertical: 4,
-                      ),
-                      decoration: BoxDecoration(
-                        color: statusBg,
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: Text(
-                        status,
-                        style: TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w700,
-                          color: statusFg,
-                        ),
-                      ),
-                    ),
-                  ],
+      builder: (ctx) => Dialog(
+        shape: RoundedRectangleBorder(borderRadius: AppRadius.xlRadius),
+        child: Padding(
+          padding: const EdgeInsets.all(AppSpacing.lg),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 64,
+                height: 64,
+                decoration: BoxDecoration(
+                  color: AppColors.error.withValues(alpha: 0.1),
+                  shape: BoxShape.circle,
                 ),
-                Text(
-                  '₱${order.total.toStringAsFixed(2)}',
-                  style: const TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w700,
-                    color: _kAccentColor,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 6),
-            Text(
-              'Pickup: ${order.pickupLocation}',
-              style: TextStyle(color: Colors.grey[700]),
-            ),
-            const SizedBox(height: 8),
-            // order items list
-            ...order.items.map(
-              (item) => Padding(
-                padding: const EdgeInsets.only(bottom: 4),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Expanded(
-                      child: Text(
-                        '${item.qty} x ${item.name}',
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                    Text('₱${(item.price * item.qty).toStringAsFixed(2)}'),
-                  ],
+                child: const Icon(
+                  Icons.delete_outline,
+                  color: AppColors.error,
+                  size: 32,
                 ),
               ),
-            ),
-            const SizedBox(height: 6),
-            Text(
-              'Placed: ${order.createdAt}',
-              style: TextStyle(fontSize: 12, color: Colors.grey[600]),
-            ),
-            const SizedBox(height: 10),
-            // status update buttons
-            Row(
-              children: [
-                Expanded(
-                  child: OutlinedButton(
-                    onPressed: () => _setStatus(order.id, 'ready for pick up'),
-                    child: const Text('Ready for Pickup'),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.green[600],
-                    ),
-                    onPressed: () => _setStatus(order.id, 'finished'),
-                    child: const Text(
-                      'Mark Finished',
-                      style: TextStyle(color: Colors.white),
+              const SizedBox(height: AppSpacing.md),
+              Text('Delete Item?', style: AppTypography.h3),
+              const SizedBox(height: AppSpacing.sm),
+              Text(
+                'Are you sure you want to delete "${item.name}"?',
+                style: AppTypography.bodyMedium,
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: AppSpacing.lg),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      style: AppButtons.secondary,
+                      onPressed: () => Navigator.pop(ctx),
+                      child: const Text('Cancel'),
                     ),
                   ),
-                ),
-              ],
-            ),
-          ],
+                  const SizedBox(width: AppSpacing.md),
+                  Expanded(
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.error,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: AppRadius.smallRadius,
+                        ),
+                      ),
+                      onPressed: () async {
+                        Navigator.pop(ctx);
+                        final success = await _vendorService.deleteKitchenItem(
+                          item.id,
+                        );
+                        if (mounted)
+                          _showSnackBar(
+                            success ? 'Item deleted' : 'Delete failed',
+                            success,
+                          );
+                      },
+                      child: const Text('Delete'),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
         ),
       ),
     );
   }
 
-  // --------------------------------------------------------------------------
-  // update order status in firebase
-  // --------------------------------------------------------------------------
   Future<void> _setStatus(String orderId, String status) async {
     final success = await _vendorService.updateOrderStatus(orderId, status);
     if (!mounted) return;
     _showSnackBar(
-      success
-          ? 'Order updated to ${status.toUpperCase()}'
-          : 'Failed to update order',
+      success ? 'Order updated to ${status.toUpperCase()}' : 'Failed to update',
       success,
     );
   }
 
-  // --------------------------------------------------------------------------
-  // helper to show feedback to user
-  // --------------------------------------------------------------------------
   void _showSnackBar(String message, bool isSuccess) {
+    ScaffoldMessenger.of(context).clearSnackBars();
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(message),
-        backgroundColor: isSuccess ? Colors.green : Colors.red,
+        content: Row(
+          children: [
+            Icon(
+              isSuccess ? Icons.check_circle : Icons.error,
+              color: Colors.white,
+              size: 20,
+            ),
+            const SizedBox(width: 8),
+            Text(message),
+          ],
+        ),
+        backgroundColor: isSuccess ? AppColors.success : AppColors.error,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: AppRadius.smallRadius),
+      ),
+    );
+  }
+
+  // --------------------------------------------------------------------------
+  // Pickup Locations Dialog
+  // --------------------------------------------------------------------------
+  void _showPickupLocationsDialog() {
+    showDialog(
+      context: context,
+      builder: (ctx) => _PickupLocationsDialog(
+        kitchenId: widget.kitchen.id,
+        initialLocations: widget.kitchen.pickupLocations,
+        vendorService: _vendorService,
       ),
     );
   }
 }
 
 // ============================================================================
-// _PickupLocationsDialog - Dialog for managing pickup locations
-// ============================================================================
-// this is a stateful dialog that lets sellers add/remove pickup locations
-// uses a TextEditingController for the input field and maintains local state
-// until the user saves changes. changes are saved immediately to firebase
-// when adding/removing items for better UX (no save button needed)
+// Pickup Locations Dialog (REDESIGNED)
 // ============================================================================
 class _PickupLocationsDialog extends StatefulWidget {
   final String kitchenId;
@@ -666,7 +785,6 @@ class _PickupLocationsDialog extends StatefulWidget {
 }
 
 class _PickupLocationsDialogState extends State<_PickupLocationsDialog> {
-  // local copy of locations so we can update UI immediately
   late List<String> _locations;
   final _controller = TextEditingController();
   bool _isLoading = false;
@@ -674,7 +792,6 @@ class _PickupLocationsDialogState extends State<_PickupLocationsDialog> {
   @override
   void initState() {
     super.initState();
-    // make a copy so we don't modify the original list
     _locations = List<String>.from(widget.initialLocations);
   }
 
@@ -686,120 +803,176 @@ class _PickupLocationsDialogState extends State<_PickupLocationsDialog> {
 
   @override
   Widget build(BuildContext context) {
-    return AlertDialog(
-      title: Row(
-        children: [
-          const Icon(Icons.location_on, color: _kAccentColor),
-          const SizedBox(width: 8),
-          const Expanded(
-            child: Text('Pickup Locations', style: TextStyle(fontSize: 18)),
-          ),
-        ],
-      ),
-      content: SizedBox(
-        width: double.maxFinite,
+    return Dialog(
+      shape: RoundedRectangleBorder(borderRadius: AppRadius.xlRadius),
+      child: Padding(
+        padding: const EdgeInsets.all(AppSpacing.lg),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            // info text explaining what this is for
-            Text(
-              'Add pickup spots where customers can collect their orders',
-              style: TextStyle(fontSize: 13, color: Colors.grey[600]),
+            // header
+            Row(
+              children: [
+                Container(
+                  width: 48,
+                  height: 48,
+                  decoration: BoxDecoration(
+                    gradient: AppColors.warmGradient,
+                    borderRadius: AppRadius.mediumRadius,
+                  ),
+                  child: const Icon(
+                    Icons.location_on,
+                    color: Colors.white,
+                    size: 24,
+                  ),
+                ),
+                const SizedBox(width: AppSpacing.md),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Pickup Locations', style: AppTypography.h4),
+                      Text(
+                        'Where customers collect orders',
+                        style: AppTypography.caption,
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: AppSpacing.lg),
 
-            // input row for adding new location
+            // input row
             Row(
               children: [
                 Expanded(
                   child: TextField(
                     controller: _controller,
-                    decoration: const InputDecoration(
-                      hintText: 'e.g., Main Gate, Canteen',
-                      border: OutlineInputBorder(),
-                      contentPadding: EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 10,
-                      ),
+                    decoration: AppDecorations.inputDecoration(
+                      label: 'New Location',
+                      hint: 'e.g., Main Gate',
+                      prefixIcon: Icons.add_location_alt,
                     ),
                     textCapitalization: TextCapitalization.words,
                     onSubmitted: (_) => _addLocation(),
                   ),
                 ),
-                const SizedBox(width: 8),
-                IconButton.filled(
-                  style: IconButton.styleFrom(backgroundColor: _kAccentColor),
-                  onPressed: _isLoading ? null : _addLocation,
-                  icon: const Icon(Icons.add, color: Colors.white),
+                const SizedBox(width: AppSpacing.sm),
+                Container(
+                  decoration: BoxDecoration(
+                    gradient: AppColors.warmGradient,
+                    borderRadius: AppRadius.smallRadius,
+                  ),
+                  child: IconButton(
+                    onPressed: _isLoading ? null : _addLocation,
+                    icon: const Icon(Icons.add, color: Colors.white),
+                  ),
                 ),
               ],
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: AppSpacing.md),
 
-            // list of current locations (scrollable if many)
-            if (_locations.isEmpty)
-              Padding(
-                padding: const EdgeInsets.symmetric(vertical: 24),
-                child: Column(
-                  children: [
-                    Icon(Icons.location_off, size: 48, color: Colors.grey[400]),
-                    const SizedBox(height: 8),
-                    Text(
-                      'No pickup locations yet',
-                      style: TextStyle(color: Colors.grey[600]),
-                    ),
-                  ],
-                ),
-              )
-            else
-              ConstrainedBox(
-                constraints: const BoxConstraints(maxHeight: 250),
-                child: ListView.builder(
-                  shrinkWrap: true,
-                  itemCount: _locations.length,
-                  itemBuilder: (context, index) {
-                    final location = _locations[index];
-                    return ListTile(
-                      contentPadding: EdgeInsets.zero,
-                      leading: const Icon(Icons.place, color: _kAccentColor),
-                      title: Text(location),
-                      trailing: IconButton(
-                        icon: Icon(
-                          Icons.delete_outline,
-                          color: Colors.red[400],
-                        ),
-                        onPressed: _isLoading
-                            ? null
-                            : () => _removeLocation(location),
+            // locations list
+            ConstrainedBox(
+              constraints: const BoxConstraints(maxHeight: 200),
+              child: _locations.isEmpty
+                  ? Padding(
+                      padding: const EdgeInsets.all(AppSpacing.lg),
+                      child: Column(
+                        children: [
+                          Icon(
+                            Icons.location_off,
+                            size: 40,
+                            color: AppColors.textHint,
+                          ),
+                          const SizedBox(height: AppSpacing.sm),
+                          Text(
+                            'No locations yet',
+                            style: AppTypography.bodyMedium,
+                          ),
+                        ],
                       ),
-                    );
-                  },
-                ),
+                    )
+                  : ListView.builder(
+                      shrinkWrap: true,
+                      itemCount: _locations.length,
+                      itemBuilder: (context, index) {
+                        final location = _locations[index];
+                        return Container(
+                          margin: const EdgeInsets.only(bottom: AppSpacing.sm),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: AppSpacing.md,
+                            vertical: AppSpacing.sm,
+                          ),
+                          decoration: BoxDecoration(
+                            color: AppColors.surfaceVariant,
+                            borderRadius: AppRadius.smallRadius,
+                          ),
+                          child: Row(
+                            children: [
+                              const Icon(
+                                Icons.place,
+                                color: AppColors.primary,
+                                size: 20,
+                              ),
+                              const SizedBox(width: AppSpacing.sm),
+                              Expanded(
+                                child: Text(
+                                  location,
+                                  style: AppTypography.bodyMedium,
+                                ),
+                              ),
+                              IconButton(
+                                icon: Icon(
+                                  Icons.delete_outline,
+                                  color: AppColors.error.withValues(alpha: 0.7),
+                                  size: 20,
+                                ),
+                                onPressed: _isLoading
+                                    ? null
+                                    : () => _removeLocation(location),
+                                constraints: const BoxConstraints(
+                                  minWidth: 36,
+                                  minHeight: 36,
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
+                      },
+                    ),
+            ),
+            const SizedBox(height: AppSpacing.md),
+
+            // done button
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                style: AppButtons.primary,
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Done'),
               ),
+            ),
           ],
         ),
       ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(context),
-          child: const Text('Done'),
-        ),
-      ],
     );
   }
 
-  // --------------------------------------------------------------------------
-  // add a new pickup location to the list and save to firebase
-  // --------------------------------------------------------------------------
   Future<void> _addLocation() async {
     final text = _controller.text.trim();
     if (text.isEmpty) return;
 
-    // check for duplicates (case insensitive)
     if (_locations.any((l) => l.toLowerCase() == text.toLowerCase())) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Location already exists')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('Location already exists'),
+          backgroundColor: AppColors.warning,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: AppRadius.smallRadius),
+        ),
+      );
       return;
     }
 
@@ -815,34 +988,20 @@ class _PickupLocationsDialogState extends State<_PickupLocationsDialog> {
         _locations.add(text);
         _controller.clear();
       });
-    } else if (mounted) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Failed to add location')));
     }
 
     setState(() => _isLoading = false);
   }
 
-  // --------------------------------------------------------------------------
-  // remove a pickup location from the list and save to firebase
-  // --------------------------------------------------------------------------
   Future<void> _removeLocation(String location) async {
     setState(() => _isLoading = true);
-
     final success = await widget.vendorService.removePickupLocation(
       widget.kitchenId,
       location,
     );
-
     if (success) {
       setState(() => _locations.remove(location));
-    } else if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Failed to remove location')),
-      );
     }
-
     setState(() => _isLoading = false);
   }
 }

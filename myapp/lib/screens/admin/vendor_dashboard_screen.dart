@@ -1,25 +1,46 @@
+// ============================================================================
+// vendor_dashboard_screen.dart - Vendor Dashboard (REDESIGNED)
+// ============================================================================
+// Beautiful dashboard for vendors to manage their kitchens
+// Features: gradient header, animated cards, statistics summary
+// ============================================================================
+
 import 'package:flutter/material.dart';
 import '../../services/vendor_kitchen_service.dart';
 import '../../services/user_service.dart';
+import '../../theme/app_theme.dart';
 import 'create_kitchen_screen.dart';
 import 'kitchen_detail_screen.dart';
 
 class VendorDashboardScreen extends StatefulWidget {
-  const VendorDashboardScreen({Key? key}) : super(key: key);
+  const VendorDashboardScreen({super.key});
 
   @override
   State<VendorDashboardScreen> createState() => _VendorDashboardScreenState();
 }
 
-class _VendorDashboardScreenState extends State<VendorDashboardScreen> {
+class _VendorDashboardScreenState extends State<VendorDashboardScreen>
+    with SingleTickerProviderStateMixin {
   final VendorKitchenService _vendorService = VendorKitchenService();
   final UserService _userService = UserService();
   String? currentUserId;
+
+  late AnimationController _animationController;
 
   @override
   void initState() {
     super.initState();
     _getCurrentUser();
+    _animationController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 800),
+    );
+  }
+
+  @override
+  void dispose() {
+    _animationController.dispose();
+    super.dispose();
   }
 
   void _getCurrentUser() async {
@@ -27,103 +48,223 @@ class _VendorDashboardScreenState extends State<VendorDashboardScreen> {
     setState(() {
       currentUserId = user?.uid;
     });
+    _animationController.forward();
   }
 
   @override
   Widget build(BuildContext context) {
     if (currentUserId == null) {
-      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+      return const Scaffold(
+        backgroundColor: AppColors.background,
+        body: Center(child: AppLoader()),
+      );
     }
 
     return Scaffold(
-      backgroundColor: const Color.fromARGB(255, 255, 236, 191),
-      appBar: AppBar(
-        title: const Text(
-          'vendor dashboard',
-          style: TextStyle(
-            color: Colors.deepOrange,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        centerTitle: true,
-        backgroundColor: Colors.white,
-        iconTheme: const IconThemeData(color: Colors.deepOrange),
-      ),
+      backgroundColor: AppColors.background,
       body: StreamBuilder<List<Kitchen>>(
         stream: _vendorService.getKitchensByOwner(currentUserId!),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
+            return const Center(child: AppLoader());
           }
 
           if (snapshot.hasError) {
-            return Center(
-              child: Text(
-                'Error: ${snapshot.error}',
-                style: const TextStyle(color: Colors.red),
-              ),
+            return EmptyState(
+              icon: Icons.error_outline,
+              title: 'Something went wrong',
+              subtitle: '${snapshot.error}',
             );
           }
 
           final kitchens = snapshot.data ?? [];
 
-          if (kitchens.isEmpty) {
-            return _buildEmptyState();
-          }
-
-          return _buildKitchensList(kitchens);
+          return CustomScrollView(
+            slivers: [
+              // gradient header
+              _buildAppBar(kitchens.length),
+              // content
+              if (kitchens.isEmpty)
+                SliverFillRemaining(child: _buildEmptyState())
+              else
+                SliverPadding(
+                  padding: const EdgeInsets.all(AppSpacing.md),
+                  sliver: SliverList(
+                    delegate: SliverChildBuilderDelegate(
+                      (context, index) =>
+                          _buildKitchenCard(kitchens[index], index),
+                      childCount: kitchens.length,
+                    ),
+                  ),
+                ),
+            ],
+          );
         },
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: _createNewKitchen,
-        backgroundColor: Colors.deepOrange,
-        icon: const Icon(Icons.add_business, color: Colors.white),
-        label: const Text('new kitchen', style: TextStyle(color: Colors.white)),
+      floatingActionButton: _buildFAB(),
+    );
+  }
+
+  // --------------------------------------------------------------------------
+  // App Bar with Gradient
+  // --------------------------------------------------------------------------
+  Widget _buildAppBar(int kitchenCount) {
+    return SliverAppBar(
+      expandedHeight: 180,
+      floating: false,
+      pinned: true,
+      elevation: 0,
+      backgroundColor: AppColors.primary,
+      leading: IconButton(
+        icon: Container(
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: Colors.white.withValues(alpha: 0.2),
+            borderRadius: AppRadius.smallRadius,
+          ),
+          child: const Icon(
+            Icons.arrow_back_ios_new,
+            color: Colors.white,
+            size: 18,
+          ),
+        ),
+        onPressed: () => Navigator.pop(context),
+      ),
+      flexibleSpace: FlexibleSpaceBar(
+        background: Container(
+          decoration: const BoxDecoration(gradient: AppColors.warmGradient),
+          child: SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(20, 60, 20, 20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  Row(
+                    children: [
+                      Container(
+                        width: 56,
+                        height: 56,
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: AppRadius.mediumRadius,
+                          boxShadow: AppShadows.medium,
+                        ),
+                        child: const Icon(
+                          Icons.store_mall_directory,
+                          color: AppColors.primary,
+                          size: 28,
+                        ),
+                      ),
+                      const SizedBox(width: AppSpacing.md),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Vendor Dashboard',
+                              style: AppTypography.h2.copyWith(
+                                color: Colors.white,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              'Manage your food business',
+                              style: AppTypography.bodyMedium.copyWith(
+                                color: Colors.white.withValues(alpha: 0.85),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: AppSpacing.md),
+                  // stats row
+                  Row(
+                    children: [
+                      _buildStatChip(Icons.store, '$kitchenCount', 'Kitchens'),
+                      const SizedBox(width: AppSpacing.md),
+                      _buildStatChip(Icons.check_circle, 'Active', 'Status'),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
       ),
     );
   }
 
-  // when no kitchen is under acount, builds empty state
+  Widget _buildStatChip(IconData icon, String value, String label) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.2),
+        borderRadius: BorderRadius.circular(AppRadius.full),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, color: Colors.white, size: 16),
+          const SizedBox(width: 6),
+          Text(
+            value,
+            style: AppTypography.bodyMedium.copyWith(
+              color: Colors.white,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          const SizedBox(width: 4),
+          Text(
+            label,
+            style: AppTypography.caption.copyWith(
+              color: Colors.white.withValues(alpha: 0.8),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // --------------------------------------------------------------------------
+  // Empty State
+  // --------------------------------------------------------------------------
   Widget _buildEmptyState() {
     return Center(
       child: Padding(
-        padding: const EdgeInsets.all(32),
+        padding: const EdgeInsets.all(AppSpacing.xl),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.store, size: 120, color: Colors.grey[400]),
-            const SizedBox(height: 24),
-            Text(
-              'staff mode',
-              style: TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-                color: Colors.deepOrange[700],
+            Container(
+              width: 120,
+              height: 120,
+              decoration: BoxDecoration(
+                color: AppColors.primary.withValues(alpha: 0.1),
+                shape: BoxShape.circle,
               ),
-              textAlign: TextAlign.center,
+              child: Icon(
+                Icons.store_mall_directory_outlined,
+                size: 60,
+                color: AppColors.primary.withValues(alpha: 0.5),
+              ),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: AppSpacing.lg),
+            Text('No Kitchens Yet', style: AppTypography.h3),
+            const SizedBox(height: AppSpacing.sm),
             Text(
-              'no kitchens yet on record. \n click plus buytton to create kitchen',
-              style: TextStyle(fontSize: 16, color: Colors.grey[600]),
+              'Start your food business journey by creating your first kitchen.',
+              style: AppTypography.bodyMedium,
               textAlign: TextAlign.center,
             ),
-            const SizedBox(height: 32),
+            const SizedBox(height: AppSpacing.xl),
             ElevatedButton.icon(
+              style: AppButtons.primary,
               onPressed: _createNewKitchen,
               icon: const Icon(Icons.add_business),
-              label: const Text('create my first kitchebn'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.deepOrange,
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 32,
-                  vertical: 16,
-                ),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-              ),
+              label: const Text('Create First Kitchen'),
             ),
           ],
         ),
@@ -131,132 +272,134 @@ class _VendorDashboardScreenState extends State<VendorDashboardScreen> {
     );
   }
 
-  // this now has kitchens
-  Widget _buildKitchensList(List<Kitchen> kitchens) {
-    return ListView.builder(
-      padding: const EdgeInsets.all(16),
-      itemCount: kitchens.length + 1, // +1 for the header
-      itemBuilder: (context, index) {
-        if (index == 0) {
-          return _buildHeader(kitchens.length);
-        }
-
-        final kitchen = kitchens[index - 1];
-        return _buildKitchenCard(kitchen);
+  // --------------------------------------------------------------------------
+  // Kitchen Card - Animated
+  // --------------------------------------------------------------------------
+  Widget _buildKitchenCard(Kitchen kitchen, int index) {
+    return TweenAnimationBuilder<double>(
+      tween: Tween(begin: 0.0, end: 1.0),
+      duration: Duration(milliseconds: 400 + (index * 100)),
+      curve: Curves.easeOutCubic,
+      builder: (context, value, child) {
+        return Transform.translate(
+          offset: Offset(30 * (1 - value), 0),
+          child: Opacity(opacity: value, child: child),
+        );
       },
-    );
-  }
-
-  // this just for uniformity purposes, same app bar n stuyff
-  Widget _buildHeader(int kitchenCount) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 16),
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.1),
-            blurRadius: 6,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          Icon(Icons.restaurant_menu, size: 48, color: Colors.deepOrange),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Total kitchens under account',
-                  style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.deepOrange[700],
+      child: Container(
+        margin: const EdgeInsets.only(bottom: AppSpacing.md),
+        decoration: AppDecorations.cardElevated,
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
+            onTap: () => _openKitchenDetail(kitchen),
+            borderRadius: AppRadius.largeRadius,
+            child: Padding(
+              padding: const EdgeInsets.all(AppSpacing.md),
+              child: Row(
+                children: [
+                  // kitchen image/icon
+                  Container(
+                    width: 72,
+                    height: 72,
+                    decoration: BoxDecoration(
+                      gradient: AppColors.warmGradient,
+                      borderRadius: AppRadius.mediumRadius,
+                    ),
+                    child: const Icon(
+                      Icons.restaurant,
+                      color: Colors.white,
+                      size: 32,
+                    ),
                   ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  '$kitchenCount ${kitchenCount == 1 ? 'kitchen' : 'kitchens'} active',
-                  style: TextStyle(fontSize: 14, color: Colors.grey[600]),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // helper function for building kitchen cards / dynamic kitchens
-  Widget _buildKitchenCard(Kitchen kitchen) {
-    return Card(
-      margin: const EdgeInsets.only(bottom: 12),
-      elevation: 3,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: InkWell(
-        onTap: () => _openKitchenDetail(kitchen),
-        borderRadius: BorderRadius.circular(12),
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Row(
-            children: [
-              // Kitchen Image
-              Container(
-                width: 80,
-                height: 80,
-                decoration: BoxDecoration(
-                  color: Colors.grey[200],
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Icon(
-                  Icons.restaurant,
-                  color: Colors.grey[400],
-                  size: 40,
-                ),
-              ),
-              const SizedBox(width: 16),
-              // Kitchen Details
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      kitchen.name,
-                      style: const TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      kitchen.description,
-                      style: TextStyle(fontSize: 14, color: Colors.grey[600]),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    const SizedBox(height: 8),
-                    Row(
+                  const SizedBox(width: AppSpacing.md),
+                  // kitchen details
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Icon(
-                          Icons.circle,
-                          color: kitchen.isActive ? Colors.green : Colors.red,
-                          size: 12,
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                kitchen.name,
+                                style: AppTypography.h4,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                            StatusBadge(
+                              status: kitchen.isActive ? 'Open' : 'Closed',
+                            ),
+                          ],
                         ),
-                        const SizedBox(width: 4),
+                        const SizedBox(height: 4),
+                        Text(
+                          kitchen.description,
+                          style: AppTypography.bodySmall,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        const SizedBox(height: AppSpacing.sm),
+                        // quick stats
+                        Row(
+                          children: [
+                            _buildMiniStat(Icons.inventory_2_outlined, 'Items'),
+                            const SizedBox(width: AppSpacing.md),
+                            _buildMiniStat(
+                              Icons.receipt_long_outlined,
+                              'Orders',
+                            ),
+                          ],
+                        ),
                       ],
                     ),
-                  ],
-                ),
+                  ),
+                  const SizedBox(width: AppSpacing.sm),
+                  Container(
+                    width: 36,
+                    height: 36,
+                    decoration: BoxDecoration(
+                      color: AppColors.primary.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(AppRadius.full),
+                    ),
+                    child: const Icon(
+                      Icons.arrow_forward_ios,
+                      size: 14,
+                      color: AppColors.primary,
+                    ),
+                  ),
+                ],
               ),
-              Icon(Icons.arrow_forward_ios, color: Colors.grey[400], size: 16),
-            ],
+            ),
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildMiniStat(IconData icon, String label) {
+    return Row(
+      children: [
+        Icon(icon, size: 14, color: AppColors.textHint),
+        const SizedBox(width: 4),
+        Text(label, style: AppTypography.caption),
+      ],
+    );
+  }
+
+  // --------------------------------------------------------------------------
+  // FAB
+  // --------------------------------------------------------------------------
+  Widget _buildFAB() {
+    return FloatingActionButton.extended(
+      onPressed: _createNewKitchen,
+      backgroundColor: AppColors.primary,
+      elevation: 4,
+      icon: const Icon(Icons.add_business, color: Colors.white),
+      label: Text(
+        'New Kitchen',
+        style: AppTypography.button.copyWith(color: Colors.white),
       ),
     );
   }
