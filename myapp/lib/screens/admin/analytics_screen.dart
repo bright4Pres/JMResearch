@@ -51,7 +51,7 @@ class AnalyticsScreen extends StatelessWidget {
               final orders = orderSnapshot.data ?? [];
               final items = itemSnapshot.data ?? [];
 
-              // crunch all the numbers
+              // calculate metrics
               final stats = _calculateStats(orders, items);
 
               return ListView(
@@ -131,7 +131,7 @@ class AnalyticsScreen extends StatelessWidget {
 
                   // top sellers
                   _buildStatCard(
-                    title: 'Top Selling Items',
+                    title: 'Top Sellers',
                     icon: Icons.trending_up,
                     children: stats.topItems.isEmpty
                         ? [
@@ -304,7 +304,7 @@ class AnalyticsScreen extends StatelessWidget {
                 Icon(Icons.pie_chart, color: _kAccentColor),
                 SizedBox(width: 10),
                 Text(
-                  'Order Status Distribution',
+                  'Order Statuses',
                   style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                 ),
               ],

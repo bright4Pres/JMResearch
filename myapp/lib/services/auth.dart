@@ -148,6 +148,19 @@ class AuthService {
     }
   }
 
+  // send password reset email
+  Future<bool> sendPasswordResetEmail(String email) async {
+    final trimmedEmail = email.trim();
+    try {
+      await _auth.sendPasswordResetEmail(email: trimmedEmail);
+      _log('Password reset email sent to: $trimmedEmail');
+      return true;
+    } catch (e) {
+      _log('sendPasswordResetEmail error: $e');
+      return false;
+    }
+  }
+
   // sign out
   Future<bool> signOut() async {
     try {

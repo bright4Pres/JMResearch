@@ -201,7 +201,23 @@ class SignInState extends State<SignIn> with SingleTickerProviderStateMixin {
                     },
                     onChanged: (val) => setState(() => password = val),
                   ),
-                  const SizedBox(height: AppSpacing.lg),
+                  const SizedBox(height: AppSpacing.sm),
+
+                  // forgot password link
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: GestureDetector(
+                      onTap: _showForgotPasswordDialog,
+                      child: Text(
+                        'Forgot Password?',
+                        style: AppTypography.bodySmall.copyWith(
+                          color: AppColors.primary,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: AppSpacing.md),
 
                   // error message
                   if (error.isNotEmpty)
@@ -306,5 +322,109 @@ class SignInState extends State<SignIn> with SingleTickerProviderStateMixin {
         loading = false;
       });
     }
+  }
+
+  void _showForgotPasswordDialog() {
+    final resetEmailController = TextEditingController(text: email);
+    final formKey = GlobalKey<FormState>();
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: AppRadius.xlRadius),
+        title: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: AppColors.primary.withValues(alpha: 0.1),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.lock_reset, color: AppColors.primary),
+            ),
+            const SizedBox(width: AppSpacing.md),
+            const Text('Reset Password'),
+          ],
+        ),
+        content: Form(
+          key: formKey,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Enter your email address and we\'ll send you a link to reset your password.',
+                style: AppTypography.bodySmall,
+              ),
+              const SizedBox(height: AppSpacing.md),
+              TextFormField(
+                controller: resetEmailController,
+                decoration: AppDecorations.inputDecoration(
+                  label: 'Email',
+                  hint: 'Enter your email',
+                  prefixIcon: Icons.email_outlined,
+                ),
+                keyboardType: TextInputType.emailAddress,
+                validator: (val) {
+                  if (val == null || val.isEmpty) return 'Enter an email';
+                  if (!RegExp(
+                    r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$',
+                  ).hasMatch(val)) {
+                    return 'Enter a valid email';
+                  }
+                  return null;
+                },
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: Text(
+              'Cancel',
+              style: TextStyle(color: AppColors.textSecondary),
+            ),
+          ),
+          ElevatedButton(
+            style: AppButtons.primary.copyWith(
+              padding: WidgetStateProperty.all(
+                const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+              ),
+            ),
+            onPressed: () async {
+              if (!formKey.currentState!.validate()) return;
+
+              final navigator = Navigator.of(ctx);
+              final scaffoldMessenger = ScaffoldMessenger.of(context);
+
+              final success = await _auth.sendPasswordResetEmail(
+                resetEmailController.text,
+              );
+
+              navigator.pop();
+
+              scaffoldMessenger.showSnackBar(
+                SnackBar(
+                  content: Text(
+                    success
+                        ? 'Password reset link sent! Check your email.'
+                        : 'Failed to send reset email. Please try again.',
+                  ),
+                  backgroundColor: success
+                      ? AppColors.success
+                      : AppColors.error,
+                  behavior: SnackBarBehavior.floating,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: AppRadius.smallRadius,
+                  ),
+                ),
+              );
+            },
+            child: const Text('Send Reset Link'),
+          ),
+        ],
+      ),
+    );
   }
 }
