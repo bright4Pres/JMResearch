@@ -1,20 +1,14 @@
 // ============================================================================
-// kitchen_menu_screen.dart - Customer Menu & Cart Screen
+// kitchen_menu_screen.dart - Customer Menu & Cart Screen (REDESIGNED)
 // ============================================================================
-// this is where customers browse a kitchen's menu and add items to their cart
-// has two tabs: Full Meals and Snacks. at the bottom there's a cart bar that
-// shows total and lets you view cart / checkout. the cart is stored locally
-// in a Map<String, _CartEntry> where the key is the item id.
-//
-// checkout creates a KitchenOrder and saves it to firestore with status 'pending'
+// Browse a kitchen's menu and add items to cart with beautiful modern UI
+// Features: animated item cards, modern cart sheet, gradient accents
 // ============================================================================
 
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:myapp/services/vendor_kitchen_service.dart';
-
-// consistent colors across the app
-const _kAccentColor = Colors.deepOrange;
+import 'package:myapp/theme/app_theme.dart';
 
 class KitchenMenuScreen extends StatefulWidget {
   const KitchenMenuScreen({
@@ -24,7 +18,7 @@ class KitchenMenuScreen extends StatefulWidget {
   });
 
   final Kitchen kitchen;
-  final String initialCategory; // 'fullmeals' or 'snacks'
+  final String initialCategory;
 
   @override
   State<KitchenMenuScreen> createState() => _KitchenMenuScreenState();
@@ -32,25 +26,15 @@ class KitchenMenuScreen extends StatefulWidget {
 
 class _KitchenMenuScreenState extends State<KitchenMenuScreen>
     with SingleTickerProviderStateMixin {
-  // tab controller for Full Meals / Snacks tabs
   late final TabController _tabController;
-
-  // firebase service for menu items
   final VendorKitchenService _vendorService = VendorKitchenService();
-
-  // cart stored as a map: itemId -> CartEntry (item + quantity)
-  // using a map makes it easy to update quantities by item id
   final Map<String, _CartEntry> _cart = {};
-
-  // checkout form fields
   final TextEditingController _nameController = TextEditingController();
-  // pickup station - will be set from kitchen's custom locations or default
   String? _pickupStation;
 
   @override
   void initState() {
     super.initState();
-    // start on snacks tab unless told otherwise
     final startIndex = widget.initialCategory == 'fullmeals' ? 0 : 1;
     _tabController = TabController(
       length: 2,
@@ -61,7 +45,6 @@ class _KitchenMenuScreenState extends State<KitchenMenuScreen>
 
   @override
   void dispose() {
-    // always clean up controllers
     _tabController.dispose();
     _nameController.dispose();
     super.dispose();
@@ -70,109 +53,307 @@ class _KitchenMenuScreenState extends State<KitchenMenuScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Text(
-          widget.kitchen.name,
-          style: const TextStyle(color: _kAccentColor),
-        ),
-        backgroundColor: Colors.white,
-        iconTheme: const IconThemeData(color: _kAccentColor),
-        bottom: TabBar(
-          controller: _tabController,
-          labelColor: _kAccentColor,
-          unselectedLabelColor: Colors.grey[600],
-          indicatorColor: _kAccentColor,
-          tabs: const [
-            Tab(text: 'Full Meals', icon: Icon(Icons.restaurant)),
-            Tab(text: 'Snacks', icon: Icon(Icons.fastfood)),
-          ],
-        ),
-      ),
-      // cart bar at bottom (only shows if cart has items)
-      bottomNavigationBar: _cart.isEmpty ? null : _buildCartBar(),
-      body: Column(
-        children: [
-          // header with kitchen info
-          _buildKitchenHeader(),
-          // menu items in tabs
-          Expanded(
-            child: TabBarView(
-              controller: _tabController,
-              children: [
-                _buildItemsList('fullmeals', 'Full Meals'),
-                _buildItemsList('snacks', 'Snacks'),
-              ],
+      backgroundColor: AppColors.background,
+      body: NestedScrollView(
+        headerSliverBuilder: (context, innerBoxIsScrolled) => [
+          // custom sliver app bar with kitchen info
+          SliverAppBar(
+            expandedHeight: 200,
+            floating: false,
+            pinned: true,
+            elevation: 0,
+            backgroundColor: AppColors.primary,
+            leading: IconButton(
+              icon: Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.2),
+                  borderRadius: AppRadius.smallRadius,
+                ),
+                child: const Icon(
+                  Icons.arrow_back_ios_new,
+                  color: Colors.white,
+                  size: 18,
+                ),
+              ),
+              onPressed: () => Navigator.pop(context),
+            ),
+            flexibleSpace: FlexibleSpaceBar(
+              background: Stack(
+                children: [
+                  // gradient background
+                  Container(
+                    decoration: const BoxDecoration(
+                      gradient: AppColors.warmGradient,
+                    ),
+                  ),
+                  // kitchen info
+                  SafeArea(
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(20, 60, 20, 20),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisAlignment: MainAxisAlignment.end,
+                        children: [
+                          Row(
+                            children: [
+                              // kitchen icon
+                              Container(
+                                width: 60,
+                                height: 60,
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  borderRadius: AppRadius.mediumRadius,
+                                  boxShadow: AppShadows.medium,
+                                ),
+                                child: const Icon(
+                                  Icons.store_rounded,
+                                  color: AppColors.primary,
+                                  size: 32,
+                                ),
+                              ),
+                              const SizedBox(width: AppSpacing.md),
+                              // kitchen name and description
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      widget.kitchen.name,
+                                      style: AppTypography.h2.copyWith(
+                                        color: Colors.white,
+                                      ),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      widget.kitchen.description,
+                                      style: AppTypography.bodyMedium.copyWith(
+                                        color: Colors.white.withValues(
+                                          alpha: 0.85,
+                                        ),
+                                      ),
+                                      maxLines: 2,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: AppSpacing.md),
+                          // status badge
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 6,
+                            ),
+                            decoration: BoxDecoration(
+                              color: widget.kitchen.isActive
+                                  ? AppColors.success.withValues(alpha: 0.9)
+                                  : AppColors.error.withValues(alpha: 0.9),
+                              borderRadius: BorderRadius.circular(
+                                AppRadius.full,
+                              ),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  widget.kitchen.isActive
+                                      ? Icons.check_circle
+                                      : Icons.cancel,
+                                  color: Colors.white,
+                                  size: 16,
+                                ),
+                                const SizedBox(width: 6),
+                                Text(
+                                  widget.kitchen.isActive
+                                      ? 'Open Now'
+                                      : 'Closed',
+                                  style: AppTypography.caption.copyWith(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            bottom: PreferredSize(
+              preferredSize: const Size.fromHeight(60),
+              child: Container(
+                margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.2),
+                  borderRadius: AppRadius.largeRadius,
+                ),
+                child: TabBar(
+                  controller: _tabController,
+                  labelColor: Colors.white,
+                  unselectedLabelColor: Colors.white.withValues(alpha: 0.6),
+                  indicatorSize: TabBarIndicatorSize.tab,
+                  dividerColor: Colors.transparent,
+                  indicator: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.3),
+                    borderRadius: AppRadius.mediumRadius,
+                  ),
+                  labelStyle: AppTypography.button.copyWith(fontSize: 13),
+                  tabs: const [
+                    Tab(
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.restaurant, size: 18),
+                          SizedBox(width: 8),
+                          Text('Full Meals'),
+                        ],
+                      ),
+                    ),
+                    Tab(
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.fastfood, size: 18),
+                          SizedBox(width: 8),
+                          Text('Snacks'),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             ),
           ),
         ],
+        body: TabBarView(
+          controller: _tabController,
+          children: [
+            _buildItemsList('fullmeals', 'Full Meals'),
+            _buildItemsList('snacks', 'Snacks'),
+          ],
+        ),
       ),
+      // floating cart bar
+      bottomNavigationBar: _cart.isEmpty ? null : _buildCartBar(),
     );
   }
 
   // --------------------------------------------------------------------------
-  // sticky cart bar at bottom - shows item count, total, view cart button
+  // Cart Bar - Floating bottom bar with cart summary
   // --------------------------------------------------------------------------
   Widget _buildCartBar() {
     return SafeArea(
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        margin: const EdgeInsets.all(AppSpacing.md),
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.md,
+          vertical: 12,
+        ),
         decoration: BoxDecoration(
-          color: Colors.white,
+          gradient: AppColors.warmGradient,
+          borderRadius: AppRadius.largeRadius,
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withValues(alpha: 0.08),
-              blurRadius: 10,
-              offset: const Offset(0, -2),
+              color: AppColors.primary.withValues(alpha: 0.3),
+              blurRadius: 20,
+              offset: const Offset(0, 8),
             ),
           ],
         ),
         child: Row(
           children: [
+            // cart icon with badge
+            Stack(
+              children: [
+                Container(
+                  width: 48,
+                  height: 48,
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.2),
+                    borderRadius: AppRadius.mediumRadius,
+                  ),
+                  child: const Icon(
+                    Icons.shopping_cart_rounded,
+                    color: Colors.white,
+                    size: 24,
+                  ),
+                ),
+                Positioned(
+                  right: 0,
+                  top: 0,
+                  child: Container(
+                    padding: const EdgeInsets.all(4),
+                    decoration: const BoxDecoration(
+                      color: Colors.white,
+                      shape: BoxShape.circle,
+                    ),
+                    child: Text(
+                      '${_cartItemCount()}',
+                      style: AppTypography.caption.copyWith(
+                        color: AppColors.primary,
+                        fontWeight: FontWeight.w700,
+                        fontSize: 10,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(width: AppSpacing.md),
+            // total info
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(
-                    '${_cartItemCount()} item${_cartItemCount() == 1 ? '' : 's'} in cart',
-                    style: const TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
+                    '${_cartItemCount()} item${_cartItemCount() == 1 ? '' : 's'}',
+                    style: AppTypography.bodySmall.copyWith(
+                      color: Colors.white.withValues(alpha: 0.8),
                     ),
                   ),
-                  const SizedBox(height: 4),
                   Text(
-                    'Total: ₱${_cartTotal().toStringAsFixed(2)}',
-                    style: const TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w700,
-                      color: _kAccentColor,
-                    ),
+                    '₱${_cartTotal().toStringAsFixed(2)}',
+                    style: AppTypography.h4.copyWith(color: Colors.white),
                   ),
                 ],
               ),
             ),
-            ElevatedButton.icon(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: _kAccentColor,
+            // view cart button
+            GestureDetector(
+              onTap: _openCartSheet,
+              child: Container(
                 padding: const EdgeInsets.symmetric(
-                  horizontal: 14,
-                  vertical: 10,
+                  horizontal: 20,
+                  vertical: 12,
                 ),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-              ),
-              onPressed: _openCartSheet,
-              icon: const Icon(
-                Icons.shopping_cart_checkout,
-                color: Colors.white,
-              ),
-              label: const Text(
-                'View Cart',
-                style: TextStyle(
+                decoration: BoxDecoration(
                   color: Colors.white,
-                  fontWeight: FontWeight.bold,
+                  borderRadius: BorderRadius.circular(AppRadius.full),
+                ),
+                child: Row(
+                  children: [
+                    Text(
+                      'Checkout',
+                      style: AppTypography.button.copyWith(
+                        color: AppColors.primary,
+                      ),
+                    ),
+                    const SizedBox(width: 4),
+                    const Icon(
+                      Icons.arrow_forward_ios,
+                      size: 14,
+                      color: AppColors.primary,
+                    ),
+                  ],
                 ),
               ),
             ),
@@ -183,8 +364,7 @@ class _KitchenMenuScreenState extends State<KitchenMenuScreen>
   }
 
   // --------------------------------------------------------------------------
-  // builds list of menu items for a category
-  // uses StreamBuilder for real-time updates from firestore
+  // Menu Items List with StreamBuilder
   // --------------------------------------------------------------------------
   Widget _buildItemsList(String category, String title) {
     return StreamBuilder<List<KitchenItem>>(
@@ -193,216 +373,172 @@ class _KitchenMenuScreenState extends State<KitchenMenuScreen>
         category,
       ),
       builder: (context, snapshot) {
-        // loading
         if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator());
+          return const Center(child: AppLoader());
         }
 
-        // error
         if (snapshot.hasError) {
-          return Center(
-            child: Text(
-              'Error loading items: ${snapshot.error}',
-              style: const TextStyle(color: Colors.red),
-            ),
+          return EmptyState(
+            icon: Icons.error_outline,
+            title: 'Error loading menu',
+            subtitle: '${snapshot.error}',
           );
         }
 
         final items = snapshot.data ?? [];
 
-        // empty state
         if (items.isEmpty) {
-          return Center(
-            child: Padding(
-              padding: const EdgeInsets.all(24),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    category == 'fullmeals' ? Icons.restaurant : Icons.fastfood,
-                    size: 72,
-                    color: Colors.grey,
-                  ),
-                  const SizedBox(height: 12),
-                  Text(
-                    'No $title yet.',
-                    style: const TextStyle(fontSize: 16, color: Colors.grey),
-                    textAlign: TextAlign.center,
-                  ),
-                ],
-              ),
-            ),
+          return EmptyState(
+            icon: category == 'fullmeals'
+                ? Icons.restaurant_menu
+                : Icons.fastfood,
+            title: 'No $title yet',
+            subtitle: 'This kitchen hasn\'t added any $title items',
           );
         }
 
-        // list of items
-        return ListView.separated(
-          padding: const EdgeInsets.all(16),
+        return ListView.builder(
+          padding: const EdgeInsets.all(AppSpacing.md),
           itemCount: items.length,
-          separatorBuilder: (_, _) => const SizedBox(height: 10),
           itemBuilder: (context, index) =>
-              _buildItemCard(items[index], category),
+              _buildItemCard(items[index], category, index),
         );
       },
     );
   }
 
   // --------------------------------------------------------------------------
-  // single menu item card with add-to-cart button
+  // Item Card - Beautiful menu item with animation
   // --------------------------------------------------------------------------
-  Widget _buildItemCard(KitchenItem item, String category) {
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
-            blurRadius: 6,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          // category icon
-          Container(
-            width: 50,
-            height: 50,
-            decoration: BoxDecoration(
-              color: Colors.orange[50],
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: Icon(
-              category == 'fullmeals' ? Icons.restaurant : Icons.fastfood,
-              color: _kAccentColor,
-            ),
-          ),
-          const SizedBox(width: 12),
-          // item details
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  item.name,
-                  style: const TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  item.description,
-                  style: TextStyle(fontSize: 13, color: Colors.grey[700]),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(width: 12),
-          // price
-          Text(
-            '₱${item.price.toStringAsFixed(2)}',
-            style: const TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w700,
-              color: _kAccentColor,
-            ),
-          ),
-          // add to cart button
-          IconButton(
-            icon: const Icon(Icons.add_circle_outline, color: _kAccentColor),
-            onPressed: () => _addToCart(item),
-          ),
-        ],
-      ),
-    );
-  }
+  Widget _buildItemCard(KitchenItem item, String category, int index) {
+    final isInCart = _cart.containsKey(item.id);
+    final cartQty = _cart[item.id]?.qty ?? 0;
 
-  // --------------------------------------------------------------------------
-  // kitchen info header
-  // --------------------------------------------------------------------------
-  Widget _buildKitchenHeader() {
-    return Container(
-      margin: const EdgeInsets.all(16),
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
-            blurRadius: 6,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 48,
-            height: 48,
-            decoration: BoxDecoration(
-              color: Colors.orange[50],
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: const Icon(Icons.store, color: _kAccentColor),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  widget.kitchen.name,
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
+    return TweenAnimationBuilder<double>(
+      tween: Tween(begin: 0.0, end: 1.0),
+      duration: Duration(milliseconds: 300 + (index * 50)),
+      curve: Curves.easeOutCubic,
+      builder: (context, value, child) {
+        return Transform.translate(
+          offset: Offset(30 * (1 - value), 0),
+          child: Opacity(opacity: value, child: child),
+        );
+      },
+      child: Container(
+        margin: const EdgeInsets.only(bottom: AppSpacing.md),
+        decoration: AppDecorations.cardElevated,
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
+            borderRadius: AppRadius.largeRadius,
+            onTap: () => _addToCart(item),
+            child: Padding(
+              padding: const EdgeInsets.all(AppSpacing.md),
+              child: Row(
+                children: [
+                  // category icon
+                  Container(
+                    width: 60,
+                    height: 60,
+                    decoration: BoxDecoration(
+                      gradient: AppColors.warmGradient.scale(0.3),
+                      borderRadius: AppRadius.mediumRadius,
+                    ),
+                    child: Icon(
+                      category == 'fullmeals'
+                          ? Icons.restaurant
+                          : Icons.fastfood,
+                      color: AppColors.primary,
+                      size: 28,
+                    ),
                   ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  widget.kitchen.description,
-                  style: TextStyle(fontSize: 13, color: Colors.grey[700]),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ],
-            ),
-          ),
-          // open/closed badge
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-            decoration: BoxDecoration(
-              color: widget.kitchen.isActive
-                  ? Colors.green[100]
-                  : Colors.red[100],
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Text(
-              widget.kitchen.isActive ? 'OPEN' : 'CLOSED',
-              style: TextStyle(
-                fontSize: 10,
-                fontWeight: FontWeight.bold,
-                color: widget.kitchen.isActive
-                    ? Colors.green[700]
-                    : Colors.red[700],
+                  const SizedBox(width: AppSpacing.md),
+                  // item details
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(item.name, style: AppTypography.h4),
+                        const SizedBox(height: 4),
+                        Text(
+                          item.description,
+                          style: AppTypography.bodySmall,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          '₱${item.price.toStringAsFixed(2)}',
+                          style: AppTypography.price,
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: AppSpacing.sm),
+                  // add to cart button / qty indicator
+                  if (isInCart)
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 8,
+                      ),
+                      decoration: BoxDecoration(
+                        color: AppColors.primary,
+                        borderRadius: BorderRadius.circular(AppRadius.full),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          GestureDetector(
+                            onTap: () => _updateQty(item.id, -1),
+                            child: const Icon(
+                              Icons.remove,
+                              color: Colors.white,
+                              size: 18,
+                            ),
+                          ),
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 12),
+                            child: Text(
+                              '$cartQty',
+                              style: AppTypography.button.copyWith(
+                                color: Colors.white,
+                              ),
+                            ),
+                          ),
+                          GestureDetector(
+                            onTap: () => _addToCart(item),
+                            child: const Icon(
+                              Icons.add,
+                              color: Colors.white,
+                              size: 18,
+                            ),
+                          ),
+                        ],
+                      ),
+                    )
+                  else
+                    Container(
+                      width: 44,
+                      height: 44,
+                      decoration: BoxDecoration(
+                        color: AppColors.primary.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(AppRadius.full),
+                      ),
+                      child: const Icon(Icons.add, color: AppColors.primary),
+                    ),
+                ],
               ),
             ),
           ),
-        ],
+        ),
       ),
     );
   }
 
   // --------------------------------------------------------------------------
-  // CART METHODS
+  // Cart Methods
   // --------------------------------------------------------------------------
-
-  // add item to cart (or increment qty if already in cart)
   void _addToCart(KitchenItem item) {
     setState(() {
       _cart.update(
@@ -411,31 +547,47 @@ class _KitchenMenuScreenState extends State<KitchenMenuScreen>
         ifAbsent: () => _CartEntry(item: item, qty: 1),
       );
     });
-    // quick feedback
+
+    // haptic-like visual feedback
+    ScaffoldMessenger.of(context).clearSnackBars();
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text('${item.name} added to cart'),
+        content: Row(
+          children: [
+            const Icon(Icons.check_circle, color: Colors.white, size: 20),
+            const SizedBox(width: 8),
+            Text('${item.name} added'),
+          ],
+        ),
+        backgroundColor: AppColors.success,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: AppRadius.smallRadius),
         duration: const Duration(milliseconds: 800),
       ),
     );
   }
 
-  // calculate cart total (price * qty for each item, then sum)
   double _cartTotal() =>
       _cart.values.map((e) => e.item.price * e.qty).fold(0.0, (a, b) => a + b);
 
-  // count total items (sum of all quantities)
   int _cartItemCount() =>
       _cart.values.map((e) => e.qty).fold(0, (a, b) => a + b);
 
-  // --------------------------------------------------------------------------
-  // builds dropdown items for pickup locations
-  // uses the kitchen's custom locations if set, otherwise shows default options
-  // --------------------------------------------------------------------------
+  void _updateQty(String itemId, int delta) {
+    setState(() {
+      final current = _cart[itemId];
+      if (current == null) return;
+      final newQty = current.qty + delta;
+      if (newQty <= 0) {
+        _cart.remove(itemId);
+      } else {
+        _cart[itemId] = current.copyWith(qty: newQty);
+      }
+    });
+  }
+
   List<DropdownMenuItem<String>> _buildPickupLocationItems() {
     final locations = widget.kitchen.pickupLocations;
-
-    // if seller hasn't set custom locations, provide defaults
     if (locations.isEmpty) {
       return const [
         DropdownMenuItem(
@@ -445,223 +597,61 @@ class _KitchenMenuScreenState extends State<KitchenMenuScreen>
         DropdownMenuItem(value: 'Canteen', child: Text('Canteen')),
       ];
     }
-
-    // use the seller's custom pickup locations
     return locations
         .map((loc) => DropdownMenuItem(value: loc, child: Text(loc)))
         .toList();
   }
 
-  // update qty in cart (+1 or -1). removes item if qty drops to 0
-  void _updateQty(String itemId, int delta) {
-    setState(() {
-      final current = _cart[itemId];
-      if (current == null) return;
-
-      final newQty = current.qty + delta;
-      if (newQty <= 0) {
-        _cart.remove(itemId); // remove if qty goes to 0
-      } else {
-        _cart[itemId] = current.copyWith(qty: newQty);
-      }
-    });
-  }
-
   // --------------------------------------------------------------------------
-  // opens the cart bottom sheet with checkout form
+  // Cart Sheet - Beautiful checkout modal
   // --------------------------------------------------------------------------
   void _openCartSheet() {
     showModalBottomSheet(
       context: context,
-      isScrollControlled: true, // allows sheet to resize with keyboard
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => _CartSheet(
+        cart: _cart,
+        nameController: _nameController,
+        pickupStation: _pickupStation,
+        pickupLocations: _buildPickupLocationItems(),
+        onPickupChanged: (value) => setState(() => _pickupStation = value),
+        onUpdateQty: _updateQty,
+        onCheckout: _handleCheckout,
+        cartTotal: _cartTotal,
       ),
-      builder: (context) {
-        return Padding(
-          // padding for keyboard
-          padding: EdgeInsets.only(
-            bottom: MediaQuery.of(context).viewInsets.bottom,
-          ),
-          child: DraggableScrollableSheet(
-            expand: false,
-            maxChildSize: 0.9,
-            initialChildSize: 0.8,
-            builder: (context, scrollController) {
-              return SingleChildScrollView(
-                controller: scrollController,
-                child: Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // header
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          const Text(
-                            'Your Cart',
-                            style: TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                          IconButton(
-                            icon: const Icon(Icons.close),
-                            onPressed: () => Navigator.pop(context),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 12),
-
-                      // cart contents
-                      if (_cart.isEmpty)
-                        const Padding(
-                          padding: EdgeInsets.symmetric(vertical: 20),
-                          child: Text('Cart is empty.'),
-                        )
-                      else ...[
-                        // cart items with +/- buttons
-                        ..._cart.values.map(
-                          (entry) => ListTile(
-                            contentPadding: EdgeInsets.zero,
-                            title: Text(entry.item.name),
-                            subtitle: Text(
-                              '₱${entry.item.price.toStringAsFixed(2)}',
-                            ),
-                            trailing: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                IconButton(
-                                  icon: const Icon(Icons.remove_circle_outline),
-                                  onPressed: () =>
-                                      _updateQty(entry.item.id, -1),
-                                ),
-                                Text('${entry.qty}'),
-                                IconButton(
-                                  icon: const Icon(Icons.add_circle_outline),
-                                  onPressed: () => _updateQty(entry.item.id, 1),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-
-                        const Divider(),
-
-                        // total row
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            const Text(
-                              'Total',
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w700,
-                              ),
-                            ),
-                            Text(
-                              '₱${_cartTotal().toStringAsFixed(2)}',
-                              style: const TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w700,
-                                color: _kAccentColor,
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 16),
-
-                        // checkout form: name input
-                        TextField(
-                          controller: _nameController,
-                          decoration: const InputDecoration(
-                            labelText: 'Your name',
-                            border: OutlineInputBorder(),
-                          ),
-                        ),
-                        const SizedBox(height: 12),
-
-                        // pickup station dropdown - uses kitchen's custom locations
-                        // if no custom locations set, show a default option
-                        InputDecorator(
-                          decoration: const InputDecoration(
-                            labelText: 'Pickup station',
-                            border: OutlineInputBorder(),
-                          ),
-                          child: DropdownButtonHideUnderline(
-                            child: DropdownButton<String>(
-                              value: _pickupStation,
-                              hint: const Text('Select pickup location'),
-                              isExpanded: true,
-                              items: _buildPickupLocationItems(),
-                              onChanged: (value) {
-                                if (value != null) {
-                                  setState(() => _pickupStation = value);
-                                }
-                              },
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 16),
-
-                        // checkout button
-                        SizedBox(
-                          width: double.infinity,
-                          child: ElevatedButton(
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: _kAccentColor,
-                              padding: const EdgeInsets.symmetric(vertical: 12),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                            ),
-                            onPressed: _handleCheckout,
-                            child: const Text(
-                              'Checkout',
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ],
-                  ),
-                ),
-              );
-            },
-          ),
-        );
-      },
     );
   }
 
-  // --------------------------------------------------------------------------
-  // creates the order in firestore and clears cart
-  // --------------------------------------------------------------------------
   void _handleCheckout() {
     if (_cart.isEmpty) {
       Navigator.pop(context);
       return;
     }
 
-    // validate that pickup location is selected
     if (_pickupStation == null || _pickupStation!.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please select a pickup location')),
+        SnackBar(
+          content: const Row(
+            children: [
+              Icon(Icons.warning_amber_rounded, color: Colors.white),
+              SizedBox(width: 8),
+              Text('Please select a pickup location'),
+            ],
+          ),
+          backgroundColor: AppColors.warning,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: AppRadius.smallRadius),
+        ),
       );
       return;
     }
 
-    // get current user (for userId in the order)
     final userId = FirebaseAuth.instance.currentUser?.uid ?? '';
     final name = _nameController.text.trim();
     final total = _cartTotal();
-    final pickup = _pickupStation!; // safe to use ! after validation
+    final pickup = _pickupStation!;
 
-    // convert cart entries to KitchenOrderItem objects
     final orderItems = _cart.values
         .map(
           (e) => KitchenOrderItem(
@@ -674,57 +664,376 @@ class _KitchenMenuScreenState extends State<KitchenMenuScreen>
         )
         .toList();
 
-    // build the order object
     final order = KitchenOrder(
-      id: '', // firestore autogenerates this
+      id: '',
       kitchenId: widget.kitchen.id,
       kitchenName: widget.kitchen.name,
       userId: userId,
       ownerId: widget.kitchen.ownerId,
       customerName: name.isEmpty ? 'Guest' : name,
       pickupLocation: pickup,
-      status: 'pending', // starts as pending
+      status: 'pending',
       total: total,
       items: orderItems,
       createdAt: DateTime.now(),
     );
 
-    // save to firestore
     _vendorService.createOrder(order);
-
-    // close the sheet
     Navigator.pop(context);
 
-    // show confirmation
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          'Order placed for ${name.isEmpty ? 'Guest' : name} at $pickup. Total ₱${total.toStringAsFixed(2)}',
+    // success dialog
+    showDialog(
+      context: context,
+      builder: (context) => Dialog(
+        shape: RoundedRectangleBorder(borderRadius: AppRadius.extraLargeRadius),
+        child: Padding(
+          padding: const EdgeInsets.all(AppSpacing.xl),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 80,
+                height: 80,
+                decoration: BoxDecoration(
+                  color: AppColors.success.withValues(alpha: 0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.check_circle,
+                  color: AppColors.success,
+                  size: 48,
+                ),
+              ),
+              const SizedBox(height: AppSpacing.lg),
+              Text('Order Placed!', style: AppTypography.h2),
+              const SizedBox(height: AppSpacing.sm),
+              Text(
+                'Your order of ₱${total.toStringAsFixed(2)} will be ready for pickup at $pickup',
+                style: AppTypography.bodyMedium,
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: AppSpacing.lg),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  style: AppButtons.primary,
+                  onPressed: () {
+                    Navigator.pop(context);
+                    Navigator.pop(context);
+                  },
+                  child: const Text('Done'),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
 
-    // reset cart and form
     setState(() {
       _cart.clear();
       _nameController.clear();
-      _pickupStation = null; // reset to null so user must select again
+      _pickupStation = null;
     });
   }
 }
 
 // ============================================================================
-// _CartEntry - helper class to store item + quantity in cart
+// Cart Sheet Widget
 // ============================================================================
-// using a class instead of just qty makes it easy to access item details
-// (name, price, etc.) when displaying the cart
+class _CartSheet extends StatefulWidget {
+  final Map<String, _CartEntry> cart;
+  final TextEditingController nameController;
+  final String? pickupStation;
+  final List<DropdownMenuItem<String>> pickupLocations;
+  final Function(String?) onPickupChanged;
+  final Function(String, int) onUpdateQty;
+  final VoidCallback onCheckout;
+  final double Function() cartTotal;
+
+  const _CartSheet({
+    required this.cart,
+    required this.nameController,
+    required this.pickupStation,
+    required this.pickupLocations,
+    required this.onPickupChanged,
+    required this.onUpdateQty,
+    required this.onCheckout,
+    required this.cartTotal,
+  });
+
+  @override
+  State<_CartSheet> createState() => _CartSheetState();
+}
+
+class _CartSheetState extends State<_CartSheet> {
+  String? _selectedPickup;
+
+  @override
+  void initState() {
+    super.initState();
+    _selectedPickup = widget.pickupStation;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return DraggableScrollableSheet(
+      initialChildSize: 0.75,
+      minChildSize: 0.5,
+      maxChildSize: 0.95,
+      builder: (context, scrollController) {
+        return Container(
+          decoration: const BoxDecoration(
+            color: AppColors.surface,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+          ),
+          child: Column(
+            children: [
+              // drag handle
+              Container(
+                margin: const EdgeInsets.symmetric(vertical: 12),
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: AppColors.textHint.withValues(alpha: 0.3),
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              // header
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text('Your Cart', style: AppTypography.h3),
+                    IconButton(
+                      icon: const Icon(Icons.close),
+                      onPressed: () => Navigator.pop(context),
+                    ),
+                  ],
+                ),
+              ),
+              // content
+              Expanded(
+                child: SingleChildScrollView(
+                  controller: scrollController,
+                  padding: const EdgeInsets.all(AppSpacing.lg),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // cart items
+                      ...widget.cart.values.map(
+                        (entry) => _buildCartItem(entry),
+                      ),
+
+                      if (widget.cart.isNotEmpty) ...[
+                        const SizedBox(height: AppSpacing.lg),
+                        const Divider(),
+                        const SizedBox(height: AppSpacing.lg),
+
+                        // total
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text('Total', style: AppTypography.h4),
+                            Text(
+                              '₱${widget.cartTotal().toStringAsFixed(2)}',
+                              style: AppTypography.h3.copyWith(
+                                color: AppColors.primary,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: AppSpacing.xl),
+
+                        // checkout form
+                        Text('Checkout Details', style: AppTypography.h4),
+                        const SizedBox(height: AppSpacing.md),
+
+                        // name input
+                        TextField(
+                          controller: widget.nameController,
+                          decoration: AppDecorations.inputDecoration(
+                            label: 'Your Name',
+                            hint: 'Enter your name',
+                            prefixIcon: Icons.person_outline,
+                          ),
+                        ),
+                        const SizedBox(height: AppSpacing.md),
+
+                        // pickup dropdown
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 4,
+                          ),
+                          decoration: BoxDecoration(
+                            color: AppColors.surfaceVariant,
+                            borderRadius: AppRadius.mediumRadius,
+                            border: Border.all(
+                              color: AppColors.textHint.withValues(alpha: 0.2),
+                            ),
+                          ),
+                          child: DropdownButtonHideUnderline(
+                            child: DropdownButton<String>(
+                              value: _selectedPickup,
+                              hint: Row(
+                                children: [
+                                  Icon(
+                                    Icons.location_on_outlined,
+                                    color: AppColors.textHint,
+                                    size: 20,
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Text(
+                                    'Select pickup location',
+                                    style: AppTypography.bodyMedium,
+                                  ),
+                                ],
+                              ),
+                              isExpanded: true,
+                              icon: const Icon(Icons.keyboard_arrow_down),
+                              items: widget.pickupLocations,
+                              onChanged: (value) {
+                                setState(() => _selectedPickup = value);
+                                widget.onPickupChanged(value);
+                              },
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: AppSpacing.xl),
+
+                        // checkout button
+                        SizedBox(
+                          width: double.infinity,
+                          child: ElevatedButton(
+                            style: AppButtons.primary,
+                            onPressed: widget.onCheckout,
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                const Icon(Icons.shopping_cart_checkout),
+                                const SizedBox(width: 8),
+                                Text(
+                                  'Place Order • ₱${widget.cartTotal().toStringAsFixed(2)}',
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildCartItem(_CartEntry entry) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: AppSpacing.md),
+      padding: const EdgeInsets.all(AppSpacing.md),
+      decoration: BoxDecoration(
+        color: AppColors.surfaceVariant,
+        borderRadius: AppRadius.mediumRadius,
+      ),
+      child: Row(
+        children: [
+          // item icon
+          Container(
+            width: 48,
+            height: 48,
+            decoration: BoxDecoration(
+              color: AppColors.primary.withValues(alpha: 0.1),
+              borderRadius: AppRadius.smallRadius,
+            ),
+            child: const Icon(
+              Icons.fastfood,
+              color: AppColors.primary,
+              size: 24,
+            ),
+          ),
+          const SizedBox(width: AppSpacing.md),
+          // item details
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  entry.item.name,
+                  style: AppTypography.bodyLarge.copyWith(
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                Text(
+                  '₱${entry.item.price.toStringAsFixed(2)}',
+                  style: AppTypography.bodySmall.copyWith(
+                    color: AppColors.primary,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          // qty controls
+          Container(
+            decoration: BoxDecoration(
+              border: Border.all(
+                color: AppColors.textHint.withValues(alpha: 0.2),
+              ),
+              borderRadius: AppRadius.smallRadius,
+            ),
+            child: Row(
+              children: [
+                IconButton(
+                  icon: const Icon(Icons.remove, size: 18),
+                  onPressed: () {
+                    widget.onUpdateQty(entry.item.id, -1);
+                    setState(() {});
+                  },
+                  constraints: const BoxConstraints(
+                    minWidth: 36,
+                    minHeight: 36,
+                  ),
+                ),
+                Text(
+                  '${entry.qty}',
+                  style: AppTypography.bodyLarge.copyWith(
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.add, size: 18),
+                  onPressed: () {
+                    widget.onUpdateQty(entry.item.id, 1);
+                    setState(() {});
+                  },
+                  constraints: const BoxConstraints(
+                    minWidth: 36,
+                    minHeight: 36,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ============================================================================
+// Cart Entry Helper Class
+// ============================================================================
 class _CartEntry {
   final KitchenItem item;
   final int qty;
 
   _CartEntry({required this.item, required this.qty});
 
-  // copyWith lets us create a new entry with updated qty (immutable pattern)
   _CartEntry copyWith({KitchenItem? item, int? qty}) {
     return _CartEntry(item: item ?? this.item, qty: qty ?? this.qty);
   }

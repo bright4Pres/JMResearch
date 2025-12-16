@@ -1,18 +1,14 @@
 // ============================================================================
-// orders_screen.dart - Customer Orders View
+// orders_screen.dart - Customer Orders View (REDESIGNED)
 // ============================================================================
-// this screen shows the logged-in user's orders split into tabs by status
-// uses StreamBuilder to get real-time updates from firestore (so when the
-// kitchen marks your order ready, it auto-moves to the Ready tab - pretty cool)
+// shows the logged-in user's orders with beautiful cards and smooth animations
+// uses StreamBuilder for real-time updates from firestore
 // ============================================================================
 
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:myapp/services/vendor_kitchen_service.dart';
-
-// app-wide colors so we don't repeat ourselves (DRY principle baby)
-const _kBackgroundColor = Color.fromARGB(255, 255, 236, 191);
-const _kAccentColor = Colors.deepOrange;
+import 'package:myapp/theme/app_theme.dart';
 
 class OrdersScreen extends StatefulWidget {
   const OrdersScreen({super.key});
@@ -21,152 +17,205 @@ class OrdersScreen extends StatefulWidget {
   State<OrdersScreen> createState() => _OrdersScreenState();
 }
 
-// SingleTickerProviderStateMixin is required for TabController animations
-// basically flutter needs a "vsync" to sync tab animations with screen refresh
 class _OrdersScreenState extends State<OrdersScreen>
     with SingleTickerProviderStateMixin {
-  // our firebase service - handles all the database stuff
   final VendorKitchenService _vendorService = VendorKitchenService();
-
-  // controller for switching between Pending/Ready/Finished tabs
   late TabController _tabController;
 
   @override
   void initState() {
     super.initState();
-    // 3 tabs: pending, ready, finished
     _tabController = TabController(length: 3, vsync: this);
   }
 
   @override
   void dispose() {
-    // IMPORTANT: always dispose controllers to prevent memory leaks
-    // if you forget this, your app will slowly eat up RAM like a hungry hippo
     _tabController.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    // grab current user ID - if not logged in, userId will be empty string
     final userId = FirebaseAuth.instance.currentUser?.uid ?? '';
 
     return Scaffold(
-      backgroundColor: _kBackgroundColor,
-      appBar: AppBar(
-        title: const Text('Orders', style: TextStyle(color: _kAccentColor)),
-        backgroundColor: Colors.white,
-        iconTheme: const IconThemeData(color: _kAccentColor),
-        // TabBar lives at the bottom of AppBar for that clean look
-        bottom: TabBar(
-          controller: _tabController,
-          labelColor: _kAccentColor,
-          unselectedLabelColor: Colors.grey,
-          indicatorColor: _kAccentColor,
-          tabs: const [
-            Tab(icon: Icon(Icons.timelapse), text: 'Pending'),
-            Tab(icon: Icon(Icons.local_shipping), text: 'Ready'),
-            Tab(icon: Icon(Icons.check_circle), text: 'Finished'),
-          ],
-        ),
-      ),
-      // show sign-in prompt if not logged in, otherwise show the tabs
-      body: userId.isEmpty
-          ? _buildSignedOutState()
-          : TabBarView(
-              controller: _tabController,
-              children: [
-                // each tab gets its own stream filtered by status
-                _buildOrdersStream(userId, 'pending'),
-                _buildOrdersStream(userId, 'ready for pick up'),
-                _buildOrdersStream(userId, 'finished'),
-              ],
+      backgroundColor: AppColors.background,
+      body: NestedScrollView(
+        headerSliverBuilder: (context, innerBoxIsScrolled) => [
+          // gradient app bar
+          SliverAppBar(
+            expandedHeight: 120,
+            floating: false,
+            pinned: true,
+            elevation: 0,
+            backgroundColor: AppColors.primary,
+            leading: IconButton(
+              icon: Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.2),
+                  borderRadius: AppRadius.smallRadius,
+                ),
+                child: const Icon(
+                  Icons.arrow_back_ios_new,
+                  color: Colors.white,
+                  size: 18,
+                ),
+              ),
+              onPressed: () => Navigator.pop(context),
             ),
+            flexibleSpace: FlexibleSpaceBar(
+              background: Container(
+                decoration: const BoxDecoration(
+                  gradient: AppColors.warmGradient,
+                ),
+                child: SafeArea(
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(20, 50, 20, 20),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        Text(
+                          'My Orders',
+                          style: AppTypography.h2.copyWith(color: Colors.white),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          'Track your food orders',
+                          style: AppTypography.bodyMedium.copyWith(
+                            color: Colors.white.withValues(alpha: 0.8),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            bottom: PreferredSize(
+              preferredSize: const Size.fromHeight(60),
+              child: Container(
+                margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.2),
+                  borderRadius: AppRadius.largeRadius,
+                ),
+                child: TabBar(
+                  controller: _tabController,
+                  labelColor: Colors.white,
+                  unselectedLabelColor: Colors.white.withValues(alpha: 0.6),
+                  indicatorSize: TabBarIndicatorSize.tab,
+                  dividerColor: Colors.transparent,
+                  indicator: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.3),
+                    borderRadius: AppRadius.mediumRadius,
+                  ),
+                  labelStyle: AppTypography.button.copyWith(fontSize: 13),
+                  tabs: const [
+                    Tab(
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.schedule, size: 18),
+                          SizedBox(width: 6),
+                          Text('Pending'),
+                        ],
+                      ),
+                    ),
+                    Tab(
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.delivery_dining, size: 18),
+                          SizedBox(width: 6),
+                          Text('Ready'),
+                        ],
+                      ),
+                    ),
+                    Tab(
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.check_circle_outline, size: 18),
+                          SizedBox(width: 6),
+                          Text('Done'),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ],
+        body: userId.isEmpty
+            ? _buildSignedOutState()
+            : TabBarView(
+                controller: _tabController,
+                children: [
+                  _buildOrdersStream(userId, 'pending'),
+                  _buildOrdersStream(userId, 'ready for pick up'),
+                  _buildOrdersStream(userId, 'finished'),
+                ],
+              ),
+      ),
     );
   }
 
   // --------------------------------------------------------------------------
-  // shows when user isn't logged in
+  // Signed Out State
   // --------------------------------------------------------------------------
   Widget _buildSignedOutState() {
-    return const Center(
-      child: Padding(
-        padding: EdgeInsets.all(24),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.receipt_long, size: 72, color: Colors.grey),
-            SizedBox(height: 12),
-            Text(
-              'Sign in to view your orders',
-              style: TextStyle(fontSize: 16, color: Colors.grey),
-              textAlign: TextAlign.center,
-            ),
-          ],
-        ),
-      ),
+    return const EmptyState(
+      icon: Icons.login_rounded,
+      title: 'Sign in required',
+      subtitle: 'Please sign in to view your orders',
     );
   }
 
   // --------------------------------------------------------------------------
-  // this is where the magic happens - StreamBuilder listens to firestore
-  // and rebuilds the list automatically when data changes
+  // Orders Stream Builder
   // --------------------------------------------------------------------------
   Widget _buildOrdersStream(String userId, String statusFilter) {
     return StreamBuilder<List<KitchenOrder>>(
-      // getOrdersForUser returns a Stream that updates in real-time
       stream: _vendorService.getOrdersForUser(userId),
       builder: (context, snapshot) {
-        // still loading from firebase
         if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator());
+          return const Center(child: AppLoader());
         }
 
-        // something went wrong (probably firebase rules or network)
         if (snapshot.hasError) {
-          return Center(
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Text(
-                'Error loading orders: ${snapshot.error}',
-                style: const TextStyle(color: Colors.red),
-                textAlign: TextAlign.center,
-              ),
-            ),
+          return EmptyState(
+            icon: Icons.error_outline,
+            title: 'Something went wrong',
+            subtitle: 'Error: ${snapshot.error}',
           );
         }
 
-        // filter orders based on which tab we're on
         final allOrders = snapshot.data ?? [];
         final orders = _filterOrdersByStatus(allOrders, statusFilter);
 
-        // no orders? show empty state
         if (orders.isEmpty) {
           return _buildEmptyState(statusFilter);
         }
 
-        // got orders - build the list
-        return ListView.separated(
-          padding: const EdgeInsets.all(16),
+        return ListView.builder(
+          padding: const EdgeInsets.all(AppSpacing.md),
           itemCount: orders.length,
-          separatorBuilder: (_, __) => const SizedBox(height: 12),
-          itemBuilder: (context, index) => _buildOrderTile(orders[index]),
+          itemBuilder: (context, index) =>
+              _buildOrderCard(orders[index], index),
         );
       },
     );
   }
 
-  // --------------------------------------------------------------------------
-  // filters orders by status - handles the "pending" edge case where status
-  // might be empty string (legacy orders or just-created ones)
-  // --------------------------------------------------------------------------
   List<KitchenOrder> _filterOrdersByStatus(
     List<KitchenOrder> orders,
     String statusFilter,
   ) {
     return orders.where((order) {
       final status = order.status.toLowerCase();
-      // treat empty status as pending (backwards compatibility)
       if (statusFilter == 'pending') {
         return status == 'pending' || status.isEmpty;
       }
@@ -175,343 +224,462 @@ class _OrdersScreenState extends State<OrdersScreen>
   }
 
   // --------------------------------------------------------------------------
-  // empty state widget - shows different icons/messages per tab
+  // Empty State
   // --------------------------------------------------------------------------
   Widget _buildEmptyState(String statusFilter) {
-    // pick the right icon and message based on tab
-    final (icon, message) = switch (statusFilter) {
-      'pending' => (Icons.timelapse, 'No pending orders'),
-      'ready for pick up' => (
-        Icons.local_shipping,
-        'No orders ready for pickup',
+    final (icon, title, subtitle) = switch (statusFilter) {
+      'pending' => (
+        Icons.schedule_rounded,
+        'No pending orders',
+        'Your pending orders will appear here',
       ),
-      _ => (Icons.check_circle, 'No finished orders yet'),
+      'ready for pick up' => (
+        Icons.delivery_dining_rounded,
+        'Nothing ready yet',
+        'Orders ready for pickup will show here',
+      ),
+      _ => (
+        Icons.history_rounded,
+        'No completed orders',
+        'Your order history will appear here',
+      ),
     };
 
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(icon, size: 72, color: Colors.grey),
-            const SizedBox(height: 12),
-            Text(
-              message,
-              style: const TextStyle(fontSize: 16, color: Colors.grey),
-              textAlign: TextAlign.center,
-            ),
-          ],
-        ),
-      ),
-    );
+    return EmptyState(icon: icon, title: title, subtitle: subtitle);
   }
 
   // --------------------------------------------------------------------------
-  // builds a single order card - shows kitchen name, status badge, items, etc
-  // tap to show order details modal
+  // Order Card - Modern Design
   // --------------------------------------------------------------------------
-  Widget _buildOrderTile(KitchenOrder order) {
-    // figure out status colors (pending = orange, others = green)
-    final isPending =
-        order.status.toLowerCase() == 'pending' || order.status.isEmpty;
-    final status = order.status.isEmpty
-        ? 'PENDING'
-        : order.status.toUpperCase();
-    final statusBg = isPending ? Colors.orange[200] : Colors.green[200];
-    final statusFg = isPending ? Colors.orange[900] : Colors.green[900];
-
-    return GestureDetector(
-      onTap: () => _showOrderDetails(order),
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 10),
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          color: Colors.orange[50],
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // header row: kitchen name + status badge
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Expanded(
-                  child: Text(
-                    order.kitchenName,
-                    style: const TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w700,
-                    ),
-                    overflow: TextOverflow.ellipsis,
+  Widget _buildOrderCard(KitchenOrder order, int index) {
+    return TweenAnimationBuilder<double>(
+      tween: Tween(begin: 0.0, end: 1.0),
+      duration: Duration(milliseconds: 300 + (index * 100)),
+      curve: Curves.easeOutCubic,
+      builder: (context, value, child) {
+        return Transform.translate(
+          offset: Offset(0, 20 * (1 - value)),
+          child: Opacity(opacity: value, child: child),
+        );
+      },
+      child: GestureDetector(
+        onTap: () => _showOrderDetails(order),
+        child: Container(
+          margin: const EdgeInsets.only(bottom: AppSpacing.md),
+          decoration: AppDecorations.cardElevated,
+          child: Column(
+            children: [
+              // header with gradient
+              Container(
+                padding: const EdgeInsets.all(AppSpacing.md),
+                decoration: BoxDecoration(
+                  color: AppColors.primary.withValues(alpha: 0.05),
+                  borderRadius: const BorderRadius.vertical(
+                    top: Radius.circular(AppRadius.lg),
                   ),
                 ),
-                // status pill/badge
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 10,
-                    vertical: 6,
-                  ),
-                  decoration: BoxDecoration(
-                    color: statusBg,
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: Text(
-                    status,
-                    style: TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w700,
-                      color: statusFg,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 6),
-            // order summary
-            Text(
-              '${order.items.length} item(s) · ₱${order.total.toStringAsFixed(2)}',
-              style: const TextStyle(fontSize: 12, color: Colors.black87),
-            ),
-            const SizedBox(height: 2),
-            Text(
-              'Pickup: ${order.pickupLocation}',
-              style: const TextStyle(fontSize: 12, color: Colors.black54),
-              overflow: TextOverflow.ellipsis,
-            ),
-            const SizedBox(height: 2),
-            Text(
-              _formatTimestamp(order.createdAt),
-              style: const TextStyle(fontSize: 11, color: Colors.grey),
-            ),
-            const SizedBox(height: 6),
-            // hint to tap for details
-            const Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(Icons.touch_app, size: 12, color: Colors.grey),
-                SizedBox(width: 4),
-                Text(
-                  'Tap to view items',
-                  style: TextStyle(fontSize: 10, color: Colors.grey),
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  // --------------------------------------------------------------------------
-  // shows a modal with full order details including all items purchased
-  // --------------------------------------------------------------------------
-  void _showOrderDetails(KitchenOrder order) {
-    final isPending =
-        order.status.toLowerCase() == 'pending' || order.status.isEmpty;
-    final status = order.status.isEmpty
-        ? 'PENDING'
-        : order.status.toUpperCase();
-    final statusBg = isPending ? Colors.orange[100] : Colors.green[100];
-    final statusFg = isPending ? Colors.orange[800] : Colors.green[800];
-
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (context) {
-        return DraggableScrollableSheet(
-          expand: false,
-          initialChildSize: 0.6,
-          minChildSize: 0.4,
-          maxChildSize: 0.9,
-          builder: (context, scrollController) {
-            return SingleChildScrollView(
-              controller: scrollController,
-              child: Padding(
-                padding: const EdgeInsets.all(20),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                child: Row(
                   children: [
-                    // drag handle
-                    Center(
-                      child: Container(
-                        width: 40,
-                        height: 4,
-                        decoration: BoxDecoration(
-                          color: Colors.grey[300],
-                          borderRadius: BorderRadius.circular(2),
-                        ),
+                    // kitchen icon
+                    Container(
+                      width: 48,
+                      height: 48,
+                      decoration: BoxDecoration(
+                        gradient: AppColors.warmGradient,
+                        borderRadius: AppRadius.mediumRadius,
+                      ),
+                      child: const Icon(
+                        Icons.store_rounded,
+                        color: Colors.white,
+                        size: 24,
                       ),
                     ),
-                    const SizedBox(height: 16),
-
-                    // header with kitchen name and status
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Expanded(
-                          child: Text(
+                    const SizedBox(width: AppSpacing.md),
+                    // kitchen name
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
                             order.kitchenName,
-                            style: const TextStyle(
-                              fontSize: 20,
-                              fontWeight: FontWeight.bold,
-                            ),
+                            style: AppTypography.h4,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                           ),
-                        ),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 6,
+                          const SizedBox(height: 2),
+                          Text(
+                            _formatTimestamp(order.createdAt),
+                            style: AppTypography.caption,
                           ),
-                          decoration: BoxDecoration(
-                            color: statusBg,
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Text(
-                            status,
-                            style: TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.bold,
-                              color: statusFg,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 8),
-
-                    // order info
-                    Text(
-                      'Ordered: ${_formatTimestamp(order.createdAt)}',
-                      style: TextStyle(fontSize: 13, color: Colors.grey[600]),
-                    ),
-                    Text(
-                      'Pickup: ${order.pickupLocation}',
-                      style: TextStyle(fontSize: 13, color: Colors.grey[600]),
-                    ),
-                    const SizedBox(height: 16),
-
-                    // items header
-                    const Text(
-                      'Items Ordered',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
+                        ],
                       ),
                     ),
-                    const Divider(),
-
-                    // items list
-                    ...order.items.map(
-                      (item) => Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 8),
-                        child: Row(
-                          children: [
-                            // quantity badge
-                            Container(
-                              width: 28,
-                              height: 28,
-                              decoration: BoxDecoration(
-                                color: _kAccentColor.withValues(alpha: 0.1),
-                                borderRadius: BorderRadius.circular(6),
-                              ),
-                              child: Center(
-                                child: Text(
-                                  '${item.qty}x',
-                                  style: const TextStyle(
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.bold,
-                                    color: _kAccentColor,
-                                  ),
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: 12),
-                            // item name
-                            Expanded(
-                              child: Text(
-                                item.name,
-                                style: const TextStyle(fontSize: 14),
-                              ),
-                            ),
-                            // item total price
-                            Text(
-                              '₱${(item.price * item.qty).toStringAsFixed(2)}',
-                              style: const TextStyle(
-                                fontSize: 14,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-
-                    const Divider(),
-
-                    // total
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        const Text(
-                          'Total',
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        Text(
-                          '₱${order.total.toStringAsFixed(2)}',
-                          style: const TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                            color: _kAccentColor,
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 20),
-
-                    // close button
-                    SizedBox(
-                      width: double.infinity,
-                      child: ElevatedButton(
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: _kAccentColor,
-                          padding: const EdgeInsets.symmetric(vertical: 14),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                        ),
-                        onPressed: () => Navigator.pop(context),
-                        child: const Text(
-                          'Close',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
+                    // status badge
+                    StatusBadge(
+                      status: order.status.isEmpty ? 'pending' : order.status,
                     ),
                   ],
                 ),
               ),
-            );
-          },
+              // order details
+              Padding(
+                padding: const EdgeInsets.all(AppSpacing.md),
+                child: Column(
+                  children: [
+                    // items summary
+                    Row(
+                      children: [
+                        _buildDetailRow(
+                          Icons.shopping_bag_outlined,
+                          '${order.items.length} item${order.items.length != 1 ? 's' : ''}',
+                        ),
+                        const SizedBox(width: AppSpacing.lg),
+                        _buildDetailRow(
+                          Icons.location_on_outlined,
+                          order.pickupLocation,
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: AppSpacing.md),
+                    // divider
+                    Container(
+                      height: 1,
+                      color: AppColors.textHint.withValues(alpha: 0.2),
+                    ),
+                    const SizedBox(height: AppSpacing.md),
+                    // total and action
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text('Total', style: AppTypography.caption),
+                            Text(
+                              '₱${order.total.toStringAsFixed(2)}',
+                              style: AppTypography.price,
+                            ),
+                          ],
+                        ),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 10,
+                          ),
+                          decoration: BoxDecoration(
+                            color: AppColors.primary.withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(AppRadius.full),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                'View Details',
+                                style: AppTypography.bodyMedium.copyWith(
+                                  color: AppColors.primary,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                              const SizedBox(width: 4),
+                              const Icon(
+                                Icons.arrow_forward_ios,
+                                size: 14,
+                                color: AppColors.primary,
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDetailRow(IconData icon, String text) {
+    return Row(
+      children: [
+        Icon(icon, size: 16, color: AppColors.textSecondary),
+        const SizedBox(width: 6),
+        Text(
+          text,
+          style: AppTypography.bodyMedium,
+          overflow: TextOverflow.ellipsis,
+        ),
+      ],
+    );
+  }
+
+  // --------------------------------------------------------------------------
+  // Order Details Modal
+  // --------------------------------------------------------------------------
+  void _showOrderDetails(KitchenOrder order) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => _OrderDetailsSheet(order: order),
+    );
+  }
+
+  String _formatTimestamp(DateTime date) {
+    final now = DateTime.now();
+    final diff = now.difference(date);
+
+    if (diff.inMinutes < 1) return 'Just now';
+    if (diff.inMinutes < 60) return '${diff.inMinutes}m ago';
+    if (diff.inHours < 24) return '${diff.inHours}h ago';
+    if (diff.inDays < 7) return '${diff.inDays}d ago';
+
+    return '${date.month}/${date.day}/${date.year}';
+  }
+}
+
+// ============================================================================
+// Order Details Sheet - Full order info in a beautiful modal
+// ============================================================================
+class _OrderDetailsSheet extends StatelessWidget {
+  final KitchenOrder order;
+
+  const _OrderDetailsSheet({required this.order});
+
+  @override
+  Widget build(BuildContext context) {
+    return DraggableScrollableSheet(
+      initialChildSize: 0.7,
+      minChildSize: 0.5,
+      maxChildSize: 0.95,
+      builder: (context, scrollController) {
+        return Container(
+          decoration: const BoxDecoration(
+            color: AppColors.surface,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+          ),
+          child: Column(
+            children: [
+              // drag handle
+              Container(
+                margin: const EdgeInsets.symmetric(vertical: 12),
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: AppColors.textHint.withValues(alpha: 0.3),
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              // content
+              Expanded(
+                child: SingleChildScrollView(
+                  controller: scrollController,
+                  padding: const EdgeInsets.all(AppSpacing.lg),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // header
+                      Row(
+                        children: [
+                          Container(
+                            width: 56,
+                            height: 56,
+                            decoration: BoxDecoration(
+                              gradient: AppColors.warmGradient,
+                              borderRadius: AppRadius.mediumRadius,
+                            ),
+                            child: const Icon(
+                              Icons.store_rounded,
+                              color: Colors.white,
+                              size: 28,
+                            ),
+                          ),
+                          const SizedBox(width: AppSpacing.md),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  order.kitchenName,
+                                  style: AppTypography.h3,
+                                ),
+                                const SizedBox(height: 4),
+                                StatusBadge(
+                                  status: order.status.isEmpty
+                                      ? 'pending'
+                                      : order.status,
+                                  isLarge: true,
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: AppSpacing.lg),
+
+                      // order info cards
+                      Row(
+                        children: [
+                          Expanded(
+                            child: _buildInfoCard(
+                              icon: Icons.calendar_today_rounded,
+                              label: 'Ordered',
+                              value: _formatDate(order.createdAt),
+                            ),
+                          ),
+                          const SizedBox(width: AppSpacing.md),
+                          Expanded(
+                            child: _buildInfoCard(
+                              icon: Icons.location_on_rounded,
+                              label: 'Pickup',
+                              value: order.pickupLocation,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: AppSpacing.lg),
+
+                      // items section
+                      Text('Order Items', style: AppTypography.h4),
+                      const SizedBox(height: AppSpacing.md),
+
+                      // items list
+                      ...order.items.map((item) => _buildItemRow(item)),
+
+                      const SizedBox(height: AppSpacing.md),
+                      const Divider(),
+                      const SizedBox(height: AppSpacing.md),
+
+                      // total row
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text('Total', style: AppTypography.h3),
+                          Text(
+                            '₱${order.total.toStringAsFixed(2)}',
+                            style: AppTypography.h2.copyWith(
+                              color: AppColors.primary,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: AppSpacing.xl),
+
+                      // close button
+                      SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton(
+                          style: AppButtons.primary,
+                          onPressed: () => Navigator.pop(context),
+                          child: const Text('Close'),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
         );
       },
     );
   }
 
-  // --------------------------------------------------------------------------
-  // formats DateTime into a nice short string like "3/15 09:30"
-  // --------------------------------------------------------------------------
-  String _formatTimestamp(DateTime date) {
-    String twoDigits(int n) => n.toString().padLeft(2, '0');
-    return '${date.month}/${date.day} ${twoDigits(date.hour)}:${twoDigits(date.minute)}';
+  Widget _buildInfoCard({
+    required IconData icon,
+    required String label,
+    required String value,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(AppSpacing.md),
+      decoration: BoxDecoration(
+        color: AppColors.surfaceVariant,
+        borderRadius: AppRadius.mediumRadius,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(icon, size: 16, color: AppColors.primary),
+              const SizedBox(width: 6),
+              Text(label, style: AppTypography.caption),
+            ],
+          ),
+          const SizedBox(height: 6),
+          Text(
+            value,
+            style: AppTypography.bodyLarge.copyWith(
+              fontWeight: FontWeight.w600,
+            ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildItemRow(KitchenOrderItem item) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: AppSpacing.sm),
+      padding: const EdgeInsets.all(AppSpacing.md),
+      decoration: BoxDecoration(
+        color: AppColors.surfaceVariant,
+        borderRadius: AppRadius.mediumRadius,
+      ),
+      child: Row(
+        children: [
+          // quantity badge
+          Container(
+            width: 36,
+            height: 36,
+            decoration: BoxDecoration(
+              color: AppColors.primary.withValues(alpha: 0.1),
+              borderRadius: AppRadius.smallRadius,
+            ),
+            child: Center(
+              child: Text(
+                '${item.qty}x',
+                style: AppTypography.bodyMedium.copyWith(
+                  color: AppColors.primary,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(width: AppSpacing.md),
+          // item name
+          Expanded(child: Text(item.name, style: AppTypography.bodyLarge)),
+          // price
+          Text(
+            '₱${(item.price * item.qty).toStringAsFixed(2)}',
+            style: AppTypography.bodyLarge.copyWith(
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _formatDate(DateTime date) {
+    final months = [
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
+    ];
+    return '${months[date.month - 1]} ${date.day}, ${date.hour}:${date.minute.toString().padLeft(2, '0')}';
   }
 }

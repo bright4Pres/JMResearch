@@ -1,12 +1,8 @@
 // ============================================================================
-// home_screen.dart - Main Home Screen
+// home_screen.dart - Main Home Screen (REDESIGNED)
 // ============================================================================
-// this is the main screen users see after logging in. it does double duty:
-// - for regular customers: shows list of kitchens to order from
-// - for staff members: shows the VendorDashboardScreen instead
-//
-// uses StreamBuilder to listen for changes in real-time (when a kitchen
-// updates their menu or status, it shows up instantly here)
+// the main hub of the app - shows kitchens for customers, dashboard for staff
+// features: modern card design, smooth animations, gradient accents
 // ============================================================================
 
 import 'package:flutter/material.dart';
@@ -14,6 +10,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:myapp/services/auth.dart';
 import 'package:myapp/services/user_service.dart';
 import 'package:myapp/models/app_user.dart';
+import 'package:myapp/theme/app_theme.dart';
 import '../../services/vendor_kitchen_service.dart';
 import 'kitchen_menu_screen.dart';
 import 'orders_screen.dart';
@@ -21,258 +18,314 @@ import 'pickup_locations_screen.dart';
 import 'edit_profile_screen.dart';
 import '../admin/vendor_dashboard_screen.dart';
 
-// app-wide constants - keeps things consistent
-const _kBackgroundColor = Color.fromARGB(255, 255, 236, 191);
-const _kAccentColor = Colors.deepOrange;
-
 class HomeScreen extends StatefulWidget {
-  HomeScreen({super.key});
-  final AuthService _auth = AuthService();
+  const HomeScreen({super.key});
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> {
-  // firebase user for display name/email
+class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
+  // firebase user for display info
   User? currentUser;
-  // our services
+
+  // services
+  final AuthService _auth = AuthService();
   final UserService _userService = UserService();
   final VendorKitchenService _vendorService = VendorKitchenService();
+
+  // animation controller for staggered list animation
+  late AnimationController _animationController;
 
   @override
   void initState() {
     super.initState();
-    // grab current user from firebase auth
     currentUser = FirebaseAuth.instance.currentUser;
+    _animationController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 800),
+    )..forward();
+  }
+
+  @override
+  void dispose() {
+    _animationController.dispose();
+    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    // StreamBuilder listens to user changes (like staff status updates)
     return StreamBuilder<AppUser?>(
       stream: _userService.currentUserStream,
       builder: (context, snapshot) {
         final appUser = snapshot.data;
 
         return Scaffold(
-          backgroundColor: _kBackgroundColor,
-          appBar: _buildAppBar(appUser),
-          drawer: _buildDrawer(appUser),
-          // staff sees VendorDashboard, customers see kitchen list
+          backgroundColor: AppColors.background,
           body: appUser?.isStaff == true
-              ? const VendorDashboardScreen()
+              ? _buildStaffView()
               : _buildCustomerView(appUser),
+          drawer: _buildDrawer(appUser),
         );
       },
     );
   }
 
   // --------------------------------------------------------------------------
-  // AppBar with profile pic, app name, and notification icon
+  // Staff View - shows dashboard in a styled container
   // --------------------------------------------------------------------------
-  AppBar _buildAppBar(AppUser? appUser) {
-    return AppBar(
-      toolbarHeight: 70,
-      backgroundColor: Colors.white,
-      // profile picture opens drawer
-      leading: Builder(
-        builder: (context) => Padding(
-          padding: const EdgeInsets.all(8.0),
-          child: GestureDetector(
-            onTap: () => Scaffold.of(context).openDrawer(),
-            child: const CircleAvatar(
-              backgroundImage: AssetImage('assets/images/profile.jpg'),
-              radius: 20,
+  Widget _buildStaffView() {
+    return const VendorDashboardScreen();
+  }
+
+  // --------------------------------------------------------------------------
+  // Customer View - beautiful scrollable home page
+  // --------------------------------------------------------------------------
+  Widget _buildCustomerView(AppUser? appUser) {
+    return CustomScrollView(
+      slivers: [
+        // modern sliver app bar with gradient
+        _buildSliverAppBar(appUser),
+        // content
+        SliverToBoxAdapter(
+          child: Padding(
+            padding: const EdgeInsets.all(AppSpacing.md),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // quick actions row
+                _buildQuickActions(),
+                const SizedBox(height: AppSpacing.lg),
+
+                // search bar
+                _buildSearchBar(),
+                const SizedBox(height: AppSpacing.lg),
+
+                // section title
+                Text('Available Kitchens', style: AppTypography.h3),
+                const SizedBox(height: AppSpacing.md),
+              ],
             ),
           ),
         ),
-      ),
-      title: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const Text(
-            'Iskaon',
-            style: TextStyle(
-              color: _kAccentColor,
-              fontFamily: 'Roboto',
-              fontSize: 24,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          // show different subtitle for staff vs customers
-          Text(
-            appUser?.isStaff == true
-                ? 'Staff Mode - Manage Kitchen'
-                : 'Order now, pick up later',
-            style: TextStyle(
-              fontSize: 14,
-              color: appUser?.isStaff == true
-                  ? Colors.deepOrange[700]
-                  : const Color.fromARGB(255, 125, 116, 38),
-              fontWeight: appUser?.isStaff == true
-                  ? FontWeight.w600
-                  : FontWeight.normal,
-            ),
-          ),
-        ],
-      ),
-      centerTitle: true,
-      actions: [
-        IconButton(
-          icon: const Icon(Icons.notifications),
-          color: Colors.blueGrey,
-          onPressed: () {
-            // TODO: implement notifications
-          },
-        ),
+        // kitchens list
+        _buildKitchensList(),
+        // bottom padding
+        const SliverToBoxAdapter(child: SizedBox(height: AppSpacing.xxl)),
       ],
     );
   }
 
   // --------------------------------------------------------------------------
-  // navigation drawer - profile info at top, menu items below
+  // Modern Sliver App Bar with gradient and profile
   // --------------------------------------------------------------------------
-  Widget _buildDrawer(AppUser? appUser) {
-    return Drawer(
-      child: Column(
-        children: [
-          // header with user info
-          _buildDrawerHeader(appUser),
-          // menu items
-          Expanded(
+  Widget _buildSliverAppBar(AppUser? appUser) {
+    return SliverAppBar(
+      expandedHeight: 200,
+      floating: false,
+      pinned: true,
+      elevation: 0,
+      backgroundColor: AppColors.primary,
+      leading: Builder(
+        builder: (context) => Padding(
+          padding: const EdgeInsets.all(8),
+          child: GestureDetector(
+            onTap: () => Scaffold.of(context).openDrawer(),
             child: Container(
-              color: Colors.orange[50],
-              child: ListView(
-                padding: EdgeInsets.zero,
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.2),
+                borderRadius: AppRadius.smallRadius,
+              ),
+              child: const Icon(
+                Icons.menu_rounded,
+                color: Colors.white,
+                size: 20,
+              ),
+            ),
+          ),
+        ),
+      ),
+      actions: [
+        Padding(
+          padding: const EdgeInsets.all(8),
+          child: GestureDetector(
+            onTap: () {
+              // TODO: notifications
+            },
+            child: Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.2),
+                borderRadius: AppRadius.smallRadius,
+              ),
+              child: const Icon(
+                Icons.notifications_outlined,
+                color: Colors.white,
+                size: 20,
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(width: 8),
+      ],
+      flexibleSpace: FlexibleSpaceBar(
+        background: Container(
+          decoration: const BoxDecoration(gradient: AppColors.warmGradient),
+          child: SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(20, 60, 20, 20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.end,
                 children: [
-                  _buildDrawerItem(
-                    icon: Icons.person_outline,
-                    title: 'Edit Profile',
-                    onTap: () {
-                      Navigator.pop(context);
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => const EditProfileScreen(),
+                  Row(
+                    children: [
+                      // greeting
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              _getGreeting(),
+                              style: AppTypography.bodyMedium.copyWith(
+                                color: Colors.white.withValues(alpha: 0.8),
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              currentUser?.displayName ?? 'Food Lover',
+                              style: AppTypography.h2.copyWith(
+                                color: Colors.white,
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              'What would you like to eat today?',
+                              style: AppTypography.bodySmall.copyWith(
+                                color: Colors.white.withValues(alpha: 0.7),
+                              ),
+                            ),
+                          ],
                         ),
-                      );
-                    },
-                  ),
-                  _buildDrawerItem(
-                    icon: Icons.history,
-                    title: 'Order History',
-                    onTap: () {
-                      Navigator.pop(context);
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(builder: (_) => const OrdersScreen()),
-                      );
-                    },
-                  ),
-                  _buildDrawerItem(
-                    icon: Icons.location_on_outlined,
-                    title: 'Pickup Locations',
-                    onTap: () {
-                      Navigator.pop(context);
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => const PickupLocationsScreen(),
+                      ),
+                      // profile avatar
+                      GestureDetector(
+                        onTap: () => Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const EditProfileScreen(),
+                          ),
                         ),
-                      );
-                    },
-                  ),
-                  Divider(color: Colors.orange[200], thickness: 1),
-                  _buildDrawerItem(
-                    icon: Icons.settings_outlined,
-                    title: 'Settings',
-                    onTap: () => Navigator.pop(context),
-                  ),
-                  _buildDrawerItem(
-                    icon: Icons.help_outline,
-                    title: 'Help & Support',
-                    onTap: () => Navigator.pop(context),
-                  ),
-                  Divider(color: Colors.orange[200], thickness: 1),
-                  _buildDrawerItem(
-                    icon: Icons.logout,
-                    title: 'Sign Out',
-                    textColor: Colors.red[700],
-                    onTap: () {
-                      Navigator.pop(context);
-                      _showSignOutDialog();
-                    },
+                        child: Hero(
+                          tag: 'profile_avatar',
+                          child: Container(
+                            width: 60,
+                            height: 60,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              border: Border.all(color: Colors.white, width: 3),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withValues(alpha: 0.2),
+                                  blurRadius: 10,
+                                ),
+                              ],
+                              image: const DecorationImage(
+                                image: AssetImage('assets/images/profile.jpg'),
+                                fit: BoxFit.cover,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),
             ),
           ),
-        ],
+        ),
       ),
     );
   }
 
+  String _getGreeting() {
+    final hour = DateTime.now().hour;
+    if (hour < 12) return 'Good morning,';
+    if (hour < 17) return 'Good afternoon,';
+    return 'Good evening,';
+  }
+
   // --------------------------------------------------------------------------
-  // drawer header with profile pic, name, email, and staff badge
+  // Quick Action Cards
   // --------------------------------------------------------------------------
-  Widget _buildDrawerHeader(AppUser? appUser) {
-    return Container(
-      height: MediaQuery.of(context).size.height * 0.20,
-      width: double.infinity,
-      color: _kAccentColor,
-      padding: const EdgeInsets.all(20),
-      child: SafeArea(
+  Widget _buildQuickActions() {
+    return Row(
+      children: [
+        Expanded(
+          child: _buildQuickActionCard(
+            icon: Icons.receipt_long_rounded,
+            label: 'My Orders',
+            color: AppColors.primary,
+            onTap: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const OrdersScreen()),
+            ),
+          ),
+        ),
+        const SizedBox(width: AppSpacing.md),
+        Expanded(
+          child: _buildQuickActionCard(
+            icon: Icons.location_on_rounded,
+            label: 'Pickup Spots',
+            color: AppColors.success,
+            onTap: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const PickupLocationsScreen()),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildQuickActionCard({
+    required IconData icon,
+    required String label,
+    required Color color,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.all(AppSpacing.md),
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.1),
+          borderRadius: AppRadius.largeRadius,
+          border: Border.all(color: color.withValues(alpha: 0.3)),
+        ),
         child: Row(
           children: [
-            const CircleAvatar(
-              radius: 35,
-              backgroundImage: AssetImage('assets/images/profile.jpg'),
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: color,
+                borderRadius: AppRadius.smallRadius,
+              ),
+              child: Icon(icon, color: Colors.white, size: 20),
             ),
-            const SizedBox(width: 15),
+            const SizedBox(width: AppSpacing.sm),
             Expanded(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    currentUser?.displayName ?? 'User',
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 5),
-                  Text(
-                    currentUser?.email ?? 'No email',
-                    style: const TextStyle(color: Colors.white70, fontSize: 13),
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  // staff badge
-                  if (appUser?.isStaff == true)
-                    Container(
-                      margin: const EdgeInsets.only(top: 8),
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 4,
-                      ),
-                      decoration: BoxDecoration(
-                        color: Colors.orange[300],
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: const Text(
-                        'STAFF',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 10,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                ],
+              child: Text(
+                label,
+                style: AppTypography.bodyMedium.copyWith(
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.textPrimary,
+                ),
               ),
             ),
+            Icon(Icons.arrow_forward_ios, size: 14, color: color),
           ],
         ),
       ),
@@ -280,61 +333,38 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   // --------------------------------------------------------------------------
-  // reusable drawer menu item
+  // Search Bar
   // --------------------------------------------------------------------------
-  Widget _buildDrawerItem({
-    required IconData icon,
-    required String title,
-    required VoidCallback onTap,
-    Color? textColor,
-  }) {
-    return ListTile(
-      leading: Icon(icon, color: textColor ?? Colors.deepOrange[700]),
-      title: Text(
-        title,
-        style: TextStyle(
-          fontSize: 16,
-          color: textColor ?? Colors.black87,
-          fontWeight: FontWeight.w500,
-        ),
+  Widget _buildSearchBar() {
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.md,
+        vertical: 14,
       ),
-      onTap: onTap,
-      hoverColor: Colors.orange[100],
-    );
-  }
-
-  // --------------------------------------------------------------------------
-  // sign out confirmation dialog
-  // --------------------------------------------------------------------------
-  void _showSignOutDialog() {
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Sign Out'),
-        content: const Text('Are you sure you want to sign out?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(),
-            child: const Text('Cancel'),
+      decoration: AppDecorations.card,
+      child: Row(
+        children: [
+          Icon(Icons.search_rounded, color: AppColors.textHint),
+          const SizedBox(width: AppSpacing.sm),
+          Expanded(
+            child: Text(
+              'Search for food or kitchen...',
+              style: AppTypography.bodyMedium.copyWith(
+                color: AppColors.textHint,
+              ),
+            ),
           ),
-          TextButton(
-            onPressed: () async {
-              // save references before async gap (widget might unmount)
-              final navigator = Navigator.of(ctx);
-              final messenger = ScaffoldMessenger.of(context);
-
-              final didSignOut = await widget._auth.signOut();
-              navigator.pop();
-
-              if (!didSignOut) {
-                messenger.showSnackBar(
-                  const SnackBar(
-                    content: Text('Failed to sign out. Please try again.'),
-                  ),
-                );
-              }
-            },
-            child: Text('Sign Out', style: TextStyle(color: Colors.red[700])),
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: AppColors.surfaceVariant,
+              borderRadius: AppRadius.smallRadius,
+            ),
+            child: Icon(
+              Icons.tune_rounded,
+              size: 18,
+              color: AppColors.textSecondary,
+            ),
           ),
         ],
       ),
@@ -342,273 +372,524 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   // --------------------------------------------------------------------------
-  // customer view - shows orders shortcut + list of kitchens
+  // Kitchens List with Stream
   // --------------------------------------------------------------------------
-  Widget _buildCustomerView(AppUser? appUser) {
+  Widget _buildKitchensList() {
     return StreamBuilder<List<Kitchen>>(
-      // getAllKitchens returns a stream that updates when kitchens change
       stream: _vendorService.getAllKitchens(),
       builder: (context, snapshot) {
-        // loading
         if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator());
+          return const SliverToBoxAdapter(
+            child: Center(
+              child: Padding(
+                padding: EdgeInsets.all(AppSpacing.xl),
+                child: AppLoader(),
+              ),
+            ),
+          );
         }
 
-        // error
         if (snapshot.hasError) {
-          return Center(
-            child: Text(
-              'Error loading kitchens: ${snapshot.error}',
-              style: const TextStyle(color: Colors.red),
+          return SliverToBoxAdapter(
+            child: EmptyState(
+              icon: Icons.error_outline,
+              title: 'Oops! Something went wrong',
+              subtitle: 'Error: ${snapshot.error}',
             ),
           );
         }
 
         final kitchens = snapshot.data ?? [];
 
-        return ListView(
-          padding: const EdgeInsets.all(16),
-          children: [
-            // orders shortcut at the top
-            _buildOrdersShortcut(),
-            const SizedBox(height: 16),
-            // show empty state or kitchen list
-            if (kitchens.isEmpty)
-              _buildEmptyKitchensState()
-            else
-              ...kitchens.map((k) => _buildKitchenCard(k)),
-          ],
+        if (kitchens.isEmpty) {
+          return const SliverToBoxAdapter(
+            child: EmptyState(
+              icon: Icons.store_outlined,
+              title: 'No kitchens yet',
+              subtitle: 'Check back soon for delicious food options!',
+            ),
+          );
+        }
+
+        return SliverList(
+          delegate: SliverChildBuilderDelegate((context, index) {
+            final kitchen = kitchens[index];
+            return Padding(
+              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+              child: SlideTransition(
+                position:
+                    Tween<Offset>(
+                      begin: const Offset(0, 0.2),
+                      end: Offset.zero,
+                    ).animate(
+                      CurvedAnimation(
+                        parent: _animationController,
+                        curve: Interval(
+                          (index * 0.1).clamp(0.0, 1.0),
+                          ((0.6 + index * 0.1)).clamp(0.0, 1.0),
+                          curve: Curves.easeOutCubic,
+                        ),
+                      ),
+                    ),
+                child: FadeTransition(
+                  opacity: CurvedAnimation(
+                    parent: _animationController,
+                    curve: Interval(
+                      (index * 0.1).clamp(0.0, 1.0),
+                      ((0.6 + index * 0.1)).clamp(0.0, 1.0),
+                    ),
+                  ),
+                  child: _buildKitchenCard(kitchen),
+                ),
+              ),
+            );
+          }, childCount: kitchens.length),
         );
       },
     );
   }
 
   // --------------------------------------------------------------------------
-  // orders shortcut card - tapping goes to orders screen
+  // Kitchen Card - Modern Design
   // --------------------------------------------------------------------------
-  Widget _buildOrdersShortcut() {
+  Widget _buildKitchenCard(Kitchen kitchen) {
     return GestureDetector(
       onTap: () => Navigator.push(
         context,
-        MaterialPageRoute(builder: (_) => const OrdersScreen()),
+        MaterialPageRoute(builder: (_) => KitchenMenuScreen(kitchen: kitchen)),
       ),
       child: Container(
-        padding: const EdgeInsets.all(18),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(14),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.08),
-              blurRadius: 10,
-              offset: const Offset(0, 3),
-            ),
-          ],
-          border: Border.all(color: _kAccentColor, width: 1.2),
-        ),
-        child: Row(
+        margin: const EdgeInsets.only(bottom: AppSpacing.md),
+        decoration: AppDecorations.cardElevated,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // kitchen banner with gradient
             Container(
-              width: 48,
-              height: 48,
+              height: 100,
               decoration: BoxDecoration(
-                color: _kAccentColor,
-                borderRadius: BorderRadius.circular(12),
+                gradient: LinearGradient(
+                  colors: [
+                    AppColors.primary.withValues(alpha: 0.9),
+                    AppColors.primaryLight.withValues(alpha: 0.7),
+                  ],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                borderRadius: const BorderRadius.vertical(
+                  top: Radius.circular(AppRadius.lg),
+                ),
               ),
-              child: const Icon(Icons.receipt_long, color: Colors.white),
-            ),
-            const SizedBox(width: 14),
-            const Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+              child: Stack(
                 children: [
-                  Text(
-                    'Orders',
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                  // background pattern
+                  Positioned.fill(
+                    child: Opacity(
+                      opacity: 0.1,
+                      child: Icon(
+                        Icons.restaurant_menu,
+                        size: 150,
+                        color: Colors.white,
+                      ),
+                    ),
                   ),
-                  SizedBox(height: 4),
-                  Text(
-                    'View pending and past orders',
-                    style: TextStyle(fontSize: 13, color: Colors.black54),
+                  // status badge
+                  Positioned(
+                    top: AppSpacing.sm,
+                    right: AppSpacing.sm,
+                    child: StatusBadge(
+                      status: kitchen.isActive ? 'open' : 'closed',
+                    ),
+                  ),
+                  // kitchen icon
+                  Positioned(
+                    bottom: -20,
+                    left: AppSpacing.md,
+                    child: Container(
+                      padding: const EdgeInsets.all(14),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: AppRadius.mediumRadius,
+                        boxShadow: AppShadows.medium,
+                      ),
+                      child: const Icon(
+                        Icons.store_rounded,
+                        color: AppColors.primary,
+                        size: 28,
+                      ),
+                    ),
                   ),
                 ],
               ),
             ),
-            const Icon(Icons.chevron_right, color: _kAccentColor),
+            // kitchen info
+            Padding(
+              padding: const EdgeInsets.fromLTRB(
+                AppSpacing.md,
+                AppSpacing.lg + 8,
+                AppSpacing.md,
+                AppSpacing.md,
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          kitchen.name,
+                          style: AppTypography.h4,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: AppColors.surfaceVariant,
+                          shape: BoxShape.circle,
+                        ),
+                        child: Icon(
+                          Icons.arrow_forward_ios,
+                          size: 14,
+                          color: AppColors.textSecondary,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    kitchen.description,
+                    style: AppTypography.bodyMedium,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: AppSpacing.md),
+                  // category chips
+                  Row(
+                    children: [
+                      _buildCategoryChip(Icons.restaurant, 'Meals'),
+                      const SizedBox(width: AppSpacing.sm),
+                      _buildCategoryChip(Icons.fastfood, 'Snacks'),
+                      const Spacer(),
+                      // pickup locations count
+                      if (kitchen.pickupLocations.isNotEmpty)
+                        Row(
+                          children: [
+                            Icon(
+                              Icons.location_on,
+                              size: 14,
+                              color: AppColors.textHint,
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              '${kitchen.pickupLocations.length} pickup spots',
+                              style: AppTypography.caption,
+                            ),
+                          ],
+                        ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
           ],
         ),
       ),
     );
   }
 
-  // --------------------------------------------------------------------------
-  // empty state when no kitchens exist
-  // --------------------------------------------------------------------------
-  Widget _buildEmptyKitchensState() {
+  Widget _buildCategoryChip(IconData icon, String label) {
     return Container(
-      padding: const EdgeInsets.all(24),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(Icons.store_outlined, size: 64, color: Colors.grey[400]),
-          const SizedBox(height: 12),
-          Text(
-            'No kitchens available yet.',
-            style: TextStyle(fontSize: 16, color: Colors.grey[600]),
-            textAlign: TextAlign.center,
-          ),
-        ],
-      ),
-    );
-  }
-
-  // --------------------------------------------------------------------------
-  // kitchen card - shows name, description, open/closed status
-  // tapping opens KitchenMenuScreen to browse & order
-  // --------------------------------------------------------------------------
-  Widget _buildKitchenCard(Kitchen kitchen) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
-      child: InkWell(
-        onTap: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (_) => KitchenMenuScreen(
-                kitchen: kitchen,
-                initialCategory: 'snacks',
-              ),
-            ),
-          );
-        },
-        child: Card(
-          color: Colors.white,
-          elevation: 2,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    // kitchen icon
-                    Container(
-                      width: 56,
-                      height: 56,
-                      decoration: BoxDecoration(
-                        color: Colors.orange[50],
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: const Icon(Icons.store, color: _kAccentColor),
-                    ),
-                    const SizedBox(width: 12),
-                    // name + description
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            kitchen.name,
-                            style: const TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            kitchen.description,
-                            style: TextStyle(
-                              fontSize: 13,
-                              color: Colors.grey[600],
-                            ),
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ],
-                      ),
-                    ),
-                    // open/closed badge
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 4,
-                      ),
-                      decoration: BoxDecoration(
-                        color: kitchen.isActive
-                            ? Colors.green[100]
-                            : Colors.red[100],
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Text(
-                        kitchen.isActive ? 'OPEN' : 'CLOSED',
-                        style: TextStyle(
-                          fontSize: 10,
-                          fontWeight: FontWeight.bold,
-                          color: kitchen.isActive
-                              ? Colors.green[700]
-                              : Colors.red[700],
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 12),
-                // category chips
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  children: [
-                    _buildKitchenChip(
-                      icon: Icons.restaurant,
-                      label: 'Full Meals',
-                    ),
-                    _buildKitchenChip(icon: Icons.fastfood, label: 'Snacks'),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  // --------------------------------------------------------------------------
-  // small chip showing category (Full Meals / Snacks)
-  // --------------------------------------------------------------------------
-  Widget _buildKitchenChip({required IconData icon, required String label}) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-      decoration: BoxDecoration(
-        color: Colors.orange[50],
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: Colors.orange[200]!),
+        color: AppColors.primary.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(AppRadius.full),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 16, color: _kAccentColor),
-          const SizedBox(width: 6),
+          Icon(icon, size: 14, color: AppColors.primary),
+          const SizedBox(width: 4),
           Text(
             label,
-            style: const TextStyle(
-              fontSize: 12,
+            style: AppTypography.caption.copyWith(
+              color: AppColors.primary,
               fontWeight: FontWeight.w600,
-              color: _kAccentColor,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // --------------------------------------------------------------------------
+  // Modern Navigation Drawer
+  // --------------------------------------------------------------------------
+  Widget _buildDrawer(AppUser? appUser) {
+    return Drawer(
+      backgroundColor: AppColors.surface,
+      child: Column(
+        children: [
+          // drawer header with gradient
+          _buildDrawerHeader(appUser),
+          // menu items
+          Expanded(
+            child: ListView(
+              padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
+              children: [
+                _buildDrawerItem(
+                  icon: Icons.person_outline_rounded,
+                  title: 'Edit Profile',
+                  onTap: () {
+                    Navigator.pop(context);
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const EditProfileScreen(),
+                      ),
+                    );
+                  },
+                ),
+                _buildDrawerItem(
+                  icon: Icons.receipt_long_rounded,
+                  title: 'Order History',
+                  onTap: () {
+                    Navigator.pop(context);
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const OrdersScreen()),
+                    );
+                  },
+                ),
+                _buildDrawerItem(
+                  icon: Icons.location_on_outlined,
+                  title: 'Pickup Locations',
+                  onTap: () {
+                    Navigator.pop(context);
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const PickupLocationsScreen(),
+                      ),
+                    );
+                  },
+                ),
+                const Padding(
+                  padding: EdgeInsets.symmetric(
+                    horizontal: AppSpacing.lg,
+                    vertical: AppSpacing.sm,
+                  ),
+                  child: Divider(),
+                ),
+                _buildDrawerItem(
+                  icon: Icons.settings_outlined,
+                  title: 'Settings',
+                  onTap: () => Navigator.pop(context),
+                ),
+                _buildDrawerItem(
+                  icon: Icons.help_outline_rounded,
+                  title: 'Help & Support',
+                  onTap: () => Navigator.pop(context),
+                ),
+                const Padding(
+                  padding: EdgeInsets.symmetric(
+                    horizontal: AppSpacing.lg,
+                    vertical: AppSpacing.sm,
+                  ),
+                  child: Divider(),
+                ),
+                _buildDrawerItem(
+                  icon: Icons.logout_rounded,
+                  title: 'Sign Out',
+                  isDestructive: true,
+                  onTap: () {
+                    Navigator.pop(context);
+                    _showSignOutDialog();
+                  },
+                ),
+              ],
+            ),
+          ),
+          // app version footer
+          Container(
+            padding: const EdgeInsets.all(AppSpacing.md),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.restaurant, size: 16, color: AppColors.textHint),
+                const SizedBox(width: 8),
+                Text('Iskaon v1.0.0', style: AppTypography.caption),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDrawerHeader(AppUser? appUser) {
+    return Container(
+      width: double.infinity,
+      padding: EdgeInsets.only(
+        top: MediaQuery.of(context).padding.top + AppSpacing.lg,
+        left: AppSpacing.lg,
+        right: AppSpacing.lg,
+        bottom: AppSpacing.lg,
+      ),
+      decoration: const BoxDecoration(gradient: AppColors.warmGradient),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // profile pic
+          Container(
+            width: 72,
+            height: 72,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              border: Border.all(color: Colors.white, width: 3),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.2),
+                  blurRadius: 8,
+                ),
+              ],
+              image: const DecorationImage(
+                image: AssetImage('assets/images/profile.jpg'),
+                fit: BoxFit.cover,
+              ),
+            ),
+          ),
+          const SizedBox(height: AppSpacing.md),
+          // name
+          Text(
+            currentUser?.displayName ?? 'User',
+            style: AppTypography.h3.copyWith(color: Colors.white),
+          ),
+          const SizedBox(height: 4),
+          // email
+          Text(
+            currentUser?.email ?? 'No email',
+            style: AppTypography.bodySmall.copyWith(
+              color: Colors.white.withValues(alpha: 0.8),
+            ),
+          ),
+          // staff badge
+          if (appUser?.isStaff == true) ...[
+            const SizedBox(height: AppSpacing.sm),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.2),
+                borderRadius: BorderRadius.circular(AppRadius.full),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(Icons.verified, size: 16, color: Colors.white),
+                  const SizedBox(width: 6),
+                  Text(
+                    'STAFF',
+                    style: AppTypography.caption.copyWith(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDrawerItem({
+    required IconData icon,
+    required String title,
+    required VoidCallback onTap,
+    bool isDestructive = false,
+  }) {
+    final color = isDestructive ? AppColors.error : AppColors.textPrimary;
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm),
+      child: ListTile(
+        leading: Container(
+          width: 40,
+          height: 40,
+          decoration: BoxDecoration(
+            color: (isDestructive ? AppColors.error : AppColors.primary)
+                .withValues(alpha: 0.1),
+            borderRadius: AppRadius.smallRadius,
+          ),
+          child: Icon(
+            icon,
+            color: isDestructive ? AppColors.error : AppColors.primary,
+            size: 22,
+          ),
+        ),
+        title: Text(
+          title,
+          style: AppTypography.bodyLarge.copyWith(
+            color: color,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+        onTap: onTap,
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.md,
+          vertical: AppSpacing.xs,
+        ),
+        shape: RoundedRectangleBorder(borderRadius: AppRadius.smallRadius),
+      ),
+    );
+  }
+
+  // --------------------------------------------------------------------------
+  // Sign Out Dialog
+  // --------------------------------------------------------------------------
+  void _showSignOutDialog() {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: AppRadius.xlRadius),
+        title: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: AppColors.error.withValues(alpha: 0.1),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.logout_rounded, color: AppColors.error),
+            ),
+            const SizedBox(width: AppSpacing.md),
+            const Text('Sign Out'),
+          ],
+        ),
+        content: Text(
+          'Are you sure you want to sign out of your account?',
+          style: AppTypography.bodyMedium,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: Text(
+              'Cancel',
+              style: TextStyle(color: AppColors.textSecondary),
+            ),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.error),
+            onPressed: () async {
+              final navigator = Navigator.of(ctx);
+              await _auth.signOut();
+              navigator.pop();
+            },
+            child: const Text(
+              'Sign Out',
+              style: TextStyle(color: Colors.white),
             ),
           ),
         ],
