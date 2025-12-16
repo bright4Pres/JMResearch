@@ -34,6 +34,10 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   final UserService _userService = UserService();
   final VendorKitchenService _vendorService = VendorKitchenService();
 
+  // search
+  final TextEditingController _searchController = TextEditingController();
+  String _searchQuery = '';
+
   // animation controller for staggered list animation
   late AnimationController _animationController;
 
@@ -50,6 +54,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   @override
   void dispose() {
     _animationController.dispose();
+    _searchController.dispose();
     super.dispose();
   }
 
@@ -339,7 +344,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     return Container(
       padding: const EdgeInsets.symmetric(
         horizontal: AppSpacing.md,
-        vertical: 14,
+        vertical: 4,
       ),
       decoration: AppDecorations.card,
       child: Row(
@@ -347,25 +352,54 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           Icon(Icons.search_rounded, color: AppColors.textHint),
           const SizedBox(width: AppSpacing.sm),
           Expanded(
-            child: Text(
-              'Search for food or kitchen...',
-              style: AppTypography.bodyMedium.copyWith(
-                color: AppColors.textHint,
+            child: TextField(
+              controller: _searchController,
+              onChanged: (value) {
+                setState(() => _searchQuery = value.toLowerCase());
+              },
+              decoration: InputDecoration(
+                hintText: 'Search for food or kitchen...',
+                hintStyle: AppTypography.bodyMedium.copyWith(
+                  color: AppColors.textHint,
+                ),
+                border: InputBorder.none,
+                contentPadding: const EdgeInsets.symmetric(vertical: 12),
+              ),
+              style: AppTypography.bodyMedium,
+            ),
+          ),
+          if (_searchQuery.isNotEmpty)
+            GestureDetector(
+              onTap: () {
+                _searchController.clear();
+                setState(() => _searchQuery = '');
+              },
+              child: Container(
+                padding: const EdgeInsets.all(6),
+                decoration: BoxDecoration(
+                  color: AppColors.textHint.withValues(alpha: 0.2),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  Icons.close,
+                  size: 16,
+                  color: AppColors.textSecondary,
+                ),
+              ),
+            )
+          else
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: AppColors.surfaceVariant,
+                borderRadius: AppRadius.smallRadius,
+              ),
+              child: Icon(
+                Icons.tune_rounded,
+                size: 18,
+                color: AppColors.textSecondary,
               ),
             ),
-          ),
-          Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: AppColors.surfaceVariant,
-              borderRadius: AppRadius.smallRadius,
-            ),
-            child: Icon(
-              Icons.tune_rounded,
-              size: 18,
-              color: AppColors.textSecondary,
-            ),
-          ),
         ],
       ),
     );
@@ -399,7 +433,25 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           );
         }
 
-        final kitchens = snapshot.data ?? [];
+        final allKitchens = snapshot.data ?? [];
+
+        // Filter kitchens based on search query
+        final kitchens = _searchQuery.isEmpty
+            ? allKitchens
+            : allKitchens.where((kitchen) {
+                return kitchen.name.toLowerCase().contains(_searchQuery) ||
+                    kitchen.description.toLowerCase().contains(_searchQuery);
+              }).toList();
+
+        if (kitchens.isEmpty && _searchQuery.isNotEmpty) {
+          return SliverToBoxAdapter(
+            child: EmptyState(
+              icon: Icons.search_off,
+              title: 'No results found',
+              subtitle: 'Try searching for something else',
+            ),
+          );
+        }
 
         if (kitchens.isEmpty) {
           return const SliverToBoxAdapter(

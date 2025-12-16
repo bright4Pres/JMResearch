@@ -111,9 +111,13 @@ class AuthService {
         // signs out so the user verifies email first
         await _auth.signOut();
         _log('User signed out for verification');
+
+        // Return a non-null AppUser to indicate successful registration
+        // (even though email is unverified - that's expected for registration)
+        return AppUser(uid: user.uid);
       }
 
-      return _userFromFirebaseUser(user);
+      return null;
     } catch (e) {
       _log('Registration error: $e');
       _log('Error details: ${e.runtimeType}');

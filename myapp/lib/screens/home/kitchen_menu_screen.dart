@@ -118,13 +118,44 @@ class _KitchenMenuScreenState extends State<KitchenMenuScreen>
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    Text(
-                                      widget.kitchen.name,
-                                      style: AppTypography.h2.copyWith(
-                                        color: Colors.white,
-                                      ),
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
+                                    Row(
+                                      children: [
+                                        Expanded(
+                                          child: Text(
+                                            widget.kitchen.name,
+                                            style: AppTypography.h2.copyWith(
+                                              color: Colors.white,
+                                            ),
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                        ),
+                                        // status indicator
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 10,
+                                            vertical: 4,
+                                          ),
+                                          decoration: BoxDecoration(
+                                            color: widget.kitchen.isActive
+                                                ? AppColors.success
+                                                : AppColors.error,
+                                            borderRadius: BorderRadius.circular(
+                                              AppRadius.full,
+                                            ),
+                                          ),
+                                          child: Text(
+                                            widget.kitchen.isActive
+                                                ? 'Open'
+                                                : 'Closed',
+                                            style: AppTypography.caption
+                                                .copyWith(
+                                                  color: Colors.white,
+                                                  fontWeight: FontWeight.w600,
+                                                ),
+                                          ),
+                                        ),
+                                      ],
                                     ),
                                     const SizedBox(height: 4),
                                     Text(
@@ -141,44 +172,6 @@ class _KitchenMenuScreenState extends State<KitchenMenuScreen>
                                 ),
                               ),
                             ],
-                          ),
-                          const SizedBox(height: AppSpacing.md),
-                          // status badge
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 12,
-                              vertical: 6,
-                            ),
-                            decoration: BoxDecoration(
-                              color: widget.kitchen.isActive
-                                  ? AppColors.success.withValues(alpha: 0.9)
-                                  : AppColors.error.withValues(alpha: 0.9),
-                              borderRadius: BorderRadius.circular(
-                                AppRadius.full,
-                              ),
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(
-                                  widget.kitchen.isActive
-                                      ? Icons.check_circle
-                                      : Icons.cancel,
-                                  color: Colors.white,
-                                  size: 16,
-                                ),
-                                const SizedBox(width: 6),
-                                Text(
-                                  widget.kitchen.isActive
-                                      ? 'Open Now'
-                                      : 'Closed',
-                                  style: AppTypography.caption.copyWith(
-                                    color: Colors.white,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                              ],
-                            ),
                           ),
                         ],
                       ),

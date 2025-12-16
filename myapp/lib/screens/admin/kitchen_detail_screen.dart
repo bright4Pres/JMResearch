@@ -156,11 +156,6 @@ class _KitchenDetailScreenState extends State<KitchenDetailScreen>
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
                         ),
-                        const SizedBox(height: AppSpacing.sm),
-                        StatusBadge(
-                          status: widget.kitchen.isActive ? 'Open' : 'Closed',
-                          isLarge: true,
-                        ),
                       ],
                     ),
                   ),
