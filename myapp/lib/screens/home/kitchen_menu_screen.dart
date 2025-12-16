@@ -685,7 +685,7 @@ class _KitchenMenuScreenState extends State<KitchenMenuScreen>
     showDialog(
       context: context,
       builder: (context) => Dialog(
-        shape: RoundedRectangleBorder(borderRadius: AppRadius.extraLargeRadius),
+        shape: RoundedRectangleBorder(borderRadius: AppRadius.xlRadius),
         child: Padding(
           padding: const EdgeInsets.all(AppSpacing.xl),
           child: Column(

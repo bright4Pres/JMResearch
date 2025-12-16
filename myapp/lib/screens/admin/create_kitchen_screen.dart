@@ -235,7 +235,7 @@ class _CreateKitchenScreenState extends State<CreateKitchenScreen> {
       if (!mounted) return;
 
       final kitchen = Kitchen(
-        id: '', // Will be set by Firestore
+        id: '', // set by firestore database
         name: _nameController.text.trim(),
         description: _descriptionController.text.trim(),
         ownerId: currentUser.uid,
