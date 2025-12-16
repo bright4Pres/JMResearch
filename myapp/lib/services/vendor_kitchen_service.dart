@@ -1,5 +1,12 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
+// ============================================================================
+// Kitchen Model
+// ============================================================================
+// represents a vendor's kitchen/store in the system
+// each staff member can own multiple kitchens with their own menus
+// pickupLocations allows each seller to define custom pickup spots for customers
+// ============================================================================
 class Kitchen {
   final String id;
   final String name;
@@ -11,6 +18,7 @@ class Kitchen {
   final DateTime createdAt;
   final Map<String, String>
   operatingHours; // e.g., {"monday": "9:00-17:00", "tuesday": "9:00-17:00"}
+  final List<String> pickupLocations; // custom pickup locations set by seller
 
   Kitchen({
     required this.id,
@@ -22,6 +30,7 @@ class Kitchen {
     this.isActive = true,
     required this.createdAt,
     this.operatingHours = const {},
+    this.pickupLocations = const [], // defaults to empty, seller adds their own
   });
 
   factory Kitchen.fromFirestore(DocumentSnapshot doc) {
@@ -36,6 +45,8 @@ class Kitchen {
       isActive: data['isActive'] ?? true,
       createdAt: (data['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
       operatingHours: Map<String, String>.from(data['operatingHours'] ?? {}),
+      // convert firestore list to List<String>
+      pickupLocations: List<String>.from(data['pickupLocations'] ?? []),
     );
   }
 
@@ -49,6 +60,7 @@ class Kitchen {
       'isActive': isActive,
       'createdAt': Timestamp.fromDate(createdAt),
       'operatingHours': operatingHours,
+      'pickupLocations': pickupLocations,
     };
   }
 }
@@ -118,7 +130,6 @@ class VendorKitchenService {
       await _firestore.collection('orders').add(order.toMap());
       return true;
     } catch (e) {
-      print('Error creating order: $e');
       return false;
     }
   }
@@ -158,7 +169,6 @@ class VendorKitchenService {
       });
       return true;
     } catch (e) {
-      print('Error updating order status: $e');
       return false;
     }
   }
@@ -169,7 +179,6 @@ class VendorKitchenService {
       await _firestore.collection('kitchens').add(kitchen.toMap());
       return true;
     } catch (e) {
-      print('Error creating kitchen: $e');
       return false;
     }
   }
@@ -206,7 +215,6 @@ class VendorKitchenService {
       await _firestore.collection('kitchens').doc(kitchenId).update(updates);
       return true;
     } catch (e) {
-      print('Error updating kitchen: $e');
       return false;
     }
   }
@@ -220,7 +228,6 @@ class VendorKitchenService {
       });
       return true;
     } catch (e) {
-      print('Error deleting kitchen: $e');
       return false;
     }
   }
@@ -231,7 +238,6 @@ class VendorKitchenService {
       await _firestore.collection('kitchen_items').add(item.toMap());
       return true;
     } catch (e) {
-      print('Error adding kitchen item: $e');
       return false;
     }
   }
@@ -317,6 +323,54 @@ class VendorKitchenService {
               .map((doc) => KitchenItem.fromFirestore(doc))
               .toList(),
         );
+  }
+
+  // --------------------------------------------------------------------------
+  // Pickup Locations Management
+  // --------------------------------------------------------------------------
+  // these methods let sellers manage their own custom pickup locations
+  // customers will see these when checking out from a specific kitchen
+
+  // adds a new pickup location to a kitchen's list
+  Future<bool> addPickupLocation(String kitchenId, String location) async {
+    try {
+      await _firestore.collection('kitchens').doc(kitchenId).update({
+        'pickupLocations': FieldValue.arrayUnion([location]),
+      });
+      return true;
+    } catch (e) {
+      print('Error adding pickup location: $e');
+      return false;
+    }
+  }
+
+  // removes a pickup location from a kitchen's list
+  Future<bool> removePickupLocation(String kitchenId, String location) async {
+    try {
+      await _firestore.collection('kitchens').doc(kitchenId).update({
+        'pickupLocations': FieldValue.arrayRemove([location]),
+      });
+      return true;
+    } catch (e) {
+      print('Error removing pickup location: $e');
+      return false;
+    }
+  }
+
+  // replaces all pickup locations (useful for reordering or bulk edit)
+  Future<bool> updatePickupLocations(
+    String kitchenId,
+    List<String> locations,
+  ) async {
+    try {
+      await _firestore.collection('kitchens').doc(kitchenId).update({
+        'pickupLocations': locations,
+      });
+      return true;
+    } catch (e) {
+      print('Error updating pickup locations: $e');
+      return false;
+    }
   }
 }
 

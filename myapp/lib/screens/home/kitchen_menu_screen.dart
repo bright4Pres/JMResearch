@@ -1,6 +1,20 @@
+// ============================================================================
+// kitchen_menu_screen.dart - Customer Menu & Cart Screen
+// ============================================================================
+// this is where customers browse a kitchen's menu and add items to their cart
+// has two tabs: Full Meals and Snacks. at the bottom there's a cart bar that
+// shows total and lets you view cart / checkout. the cart is stored locally
+// in a Map<String, _CartEntry> where the key is the item id.
+//
+// checkout creates a KitchenOrder and saves it to firestore with status 'pending'
+// ============================================================================
+
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:myapp/services/vendor_kitchen_service.dart';
+
+// consistent colors across the app
+const _kAccentColor = Colors.deepOrange;
 
 class KitchenMenuScreen extends StatefulWidget {
   const KitchenMenuScreen({
@@ -18,16 +32,25 @@ class KitchenMenuScreen extends StatefulWidget {
 
 class _KitchenMenuScreenState extends State<KitchenMenuScreen>
     with SingleTickerProviderStateMixin {
+  // tab controller for Full Meals / Snacks tabs
   late final TabController _tabController;
+
+  // firebase service for menu items
   final VendorKitchenService _vendorService = VendorKitchenService();
+
+  // cart stored as a map: itemId -> CartEntry (item + quantity)
+  // using a map makes it easy to update quantities by item id
   final Map<String, _CartEntry> _cart = {};
+
+  // checkout form fields
   final TextEditingController _nameController = TextEditingController();
-  String _pickupStation = 'Activity Center';
+  // pickup station - will be set from kitchen's custom locations or default
+  String? _pickupStation;
 
   @override
   void initState() {
     super.initState();
-    // default to snacks tab unless told otherwise
+    // start on snacks tab unless told otherwise
     final startIndex = widget.initialCategory == 'fullmeals' ? 0 : 1;
     _tabController = TabController(
       length: 2,
@@ -38,6 +61,7 @@ class _KitchenMenuScreenState extends State<KitchenMenuScreen>
 
   @override
   void dispose() {
+    // always clean up controllers
     _tabController.dispose();
     _nameController.dispose();
     super.dispose();
@@ -49,97 +73,28 @@ class _KitchenMenuScreenState extends State<KitchenMenuScreen>
       appBar: AppBar(
         title: Text(
           widget.kitchen.name,
-          style: const TextStyle(color: Colors.deepOrange),
+          style: const TextStyle(color: _kAccentColor),
         ),
         backgroundColor: Colors.white,
-        iconTheme: const IconThemeData(color: Colors.deepOrange),
+        iconTheme: const IconThemeData(color: _kAccentColor),
         bottom: TabBar(
           controller: _tabController,
-          labelColor: Colors.deepOrange,
+          labelColor: _kAccentColor,
           unselectedLabelColor: Colors.grey[600],
-          indicatorColor: Colors.deepOrange,
+          indicatorColor: _kAccentColor,
           tabs: const [
             Tab(text: 'Full Meals', icon: Icon(Icons.restaurant)),
             Tab(text: 'Snacks', icon: Icon(Icons.fastfood)),
           ],
         ),
       ),
-      bottomNavigationBar: _cart.isEmpty
-          ? null
-          : SafeArea(
-              child: Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 12,
-                ),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.08),
-                      blurRadius: 10,
-                      offset: const Offset(0, -2),
-                    ),
-                  ],
-                ),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(
-                            '${_cartItemCount()} item${_cartItemCount() == 1 ? '' : 's'} in cart',
-                            style: const TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            'Total: ₱${_cartTotal().toStringAsFixed(2)}',
-                            style: const TextStyle(
-                              fontSize: 13,
-                              fontWeight: FontWeight.w700,
-                              color: Colors.deepOrange,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    ElevatedButton.icon(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.deepOrange,
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 14,
-                          vertical: 10,
-                        ),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
-                      onPressed: _openCartSheet,
-                      icon: const Icon(
-                        Icons.shopping_cart_checkout,
-                        color: Colors.white,
-                      ),
-                      label: const Text(
-                        'View Cart',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
+      // cart bar at bottom (only shows if cart has items)
+      bottomNavigationBar: _cart.isEmpty ? null : _buildCartBar(),
       body: Column(
         children: [
-          // little header to remind which kitchen we're inside
+          // header with kitchen info
           _buildKitchenHeader(),
+          // menu items in tabs
           Expanded(
             child: TabBarView(
               controller: _tabController,
@@ -154,6 +109,83 @@ class _KitchenMenuScreenState extends State<KitchenMenuScreen>
     );
   }
 
+  // --------------------------------------------------------------------------
+  // sticky cart bar at bottom - shows item count, total, view cart button
+  // --------------------------------------------------------------------------
+  Widget _buildCartBar() {
+    return SafeArea(
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.08),
+              blurRadius: 10,
+              offset: const Offset(0, -2),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    '${_cartItemCount()} item${_cartItemCount() == 1 ? '' : 's'} in cart',
+                    style: const TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Total: ₱${_cartTotal().toStringAsFixed(2)}',
+                    style: const TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                      color: _kAccentColor,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            ElevatedButton.icon(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: _kAccentColor,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 14,
+                  vertical: 10,
+                ),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+              onPressed: _openCartSheet,
+              icon: const Icon(
+                Icons.shopping_cart_checkout,
+                color: Colors.white,
+              ),
+              label: const Text(
+                'View Cart',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // --------------------------------------------------------------------------
+  // builds list of menu items for a category
+  // uses StreamBuilder for real-time updates from firestore
+  // --------------------------------------------------------------------------
   Widget _buildItemsList(String category, String title) {
     return StreamBuilder<List<KitchenItem>>(
       stream: _vendorService.getItemsByKitchenAndCategory(
@@ -161,10 +193,12 @@ class _KitchenMenuScreenState extends State<KitchenMenuScreen>
         category,
       ),
       builder: (context, snapshot) {
+        // loading
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Center(child: CircularProgressIndicator());
         }
 
+        // error
         if (snapshot.hasError) {
           return Center(
             child: Text(
@@ -176,6 +210,7 @@ class _KitchenMenuScreenState extends State<KitchenMenuScreen>
 
         final items = snapshot.data ?? [];
 
+        // empty state
         if (items.isEmpty) {
           return Center(
             child: Padding(
@@ -200,91 +235,96 @@ class _KitchenMenuScreenState extends State<KitchenMenuScreen>
           );
         }
 
+        // list of items
         return ListView.separated(
           padding: const EdgeInsets.all(16),
           itemCount: items.length,
-          separatorBuilder: (_, __) => const SizedBox(height: 10),
-          itemBuilder: (context, index) {
-            final item = items[index];
-            return Container(
-              padding: const EdgeInsets.all(14),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(12),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.05),
-                    blurRadius: 6,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
-              ),
-              child: Row(
-                children: [
-                  Container(
-                    width: 50,
-                    height: 50,
-                    decoration: BoxDecoration(
-                      color: Colors.orange[50],
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: Icon(
-                      category == 'fullmeals'
-                          ? Icons.restaurant
-                          : Icons.fastfood,
-                      color: Colors.deepOrange,
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          item.name,
-                          style: const TextStyle(
-                            fontSize: 15,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          item.description,
-                          style: TextStyle(
-                            fontSize: 13,
-                            color: Colors.grey[700],
-                          ),
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Text(
-                    '₱${item.price.toStringAsFixed(2)}',
-                    style: const TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w700,
-                      color: Colors.deepOrange,
-                    ),
-                  ),
-                  IconButton(
-                    icon: const Icon(
-                      Icons.add_circle_outline,
-                      color: Colors.deepOrange,
-                    ),
-                    onPressed: () => _addToCart(item),
-                  ),
-                ],
-              ),
-            );
-          },
+          separatorBuilder: (_, _) => const SizedBox(height: 10),
+          itemBuilder: (context, index) =>
+              _buildItemCard(items[index], category),
         );
       },
     );
   }
 
+  // --------------------------------------------------------------------------
+  // single menu item card with add-to-cart button
+  // --------------------------------------------------------------------------
+  Widget _buildItemCard(KitchenItem item, String category) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 6,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          // category icon
+          Container(
+            width: 50,
+            height: 50,
+            decoration: BoxDecoration(
+              color: Colors.orange[50],
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Icon(
+              category == 'fullmeals' ? Icons.restaurant : Icons.fastfood,
+              color: _kAccentColor,
+            ),
+          ),
+          const SizedBox(width: 12),
+          // item details
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  item.name,
+                  style: const TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  item.description,
+                  style: TextStyle(fontSize: 13, color: Colors.grey[700]),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 12),
+          // price
+          Text(
+            '₱${item.price.toStringAsFixed(2)}',
+            style: const TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w700,
+              color: _kAccentColor,
+            ),
+          ),
+          // add to cart button
+          IconButton(
+            icon: const Icon(Icons.add_circle_outline, color: _kAccentColor),
+            onPressed: () => _addToCart(item),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // --------------------------------------------------------------------------
+  // kitchen info header
+  // --------------------------------------------------------------------------
   Widget _buildKitchenHeader() {
     return Container(
       margin: const EdgeInsets.all(16),
@@ -294,7 +334,7 @@ class _KitchenMenuScreenState extends State<KitchenMenuScreen>
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 6,
             offset: const Offset(0, 2),
           ),
@@ -309,7 +349,7 @@ class _KitchenMenuScreenState extends State<KitchenMenuScreen>
               color: Colors.orange[50],
               borderRadius: BorderRadius.circular(12),
             ),
-            child: const Icon(Icons.store, color: Colors.deepOrange),
+            child: const Icon(Icons.store, color: _kAccentColor),
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -333,6 +373,7 @@ class _KitchenMenuScreenState extends State<KitchenMenuScreen>
               ],
             ),
           ),
+          // open/closed badge
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
             decoration: BoxDecoration(
@@ -357,6 +398,11 @@ class _KitchenMenuScreenState extends State<KitchenMenuScreen>
     );
   }
 
+  // --------------------------------------------------------------------------
+  // CART METHODS
+  // --------------------------------------------------------------------------
+
+  // add item to cart (or increment qty if already in cart)
   void _addToCart(KitchenItem item) {
     setState(() {
       _cart.update(
@@ -365,6 +411,7 @@ class _KitchenMenuScreenState extends State<KitchenMenuScreen>
         ifAbsent: () => _CartEntry(item: item, qty: 1),
       );
     });
+    // quick feedback
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text('${item.name} added to cart'),
@@ -373,25 +420,66 @@ class _KitchenMenuScreenState extends State<KitchenMenuScreen>
     );
   }
 
-  double _cartTotal() {
-    return _cart.values
-        .map((e) => e.item.price * e.qty)
-        .fold(0.0, (a, b) => a + b);
+  // calculate cart total (price * qty for each item, then sum)
+  double _cartTotal() =>
+      _cart.values.map((e) => e.item.price * e.qty).fold(0.0, (a, b) => a + b);
+
+  // count total items (sum of all quantities)
+  int _cartItemCount() =>
+      _cart.values.map((e) => e.qty).fold(0, (a, b) => a + b);
+
+  // --------------------------------------------------------------------------
+  // builds dropdown items for pickup locations
+  // uses the kitchen's custom locations if set, otherwise shows default options
+  // --------------------------------------------------------------------------
+  List<DropdownMenuItem<String>> _buildPickupLocationItems() {
+    final locations = widget.kitchen.pickupLocations;
+
+    // if seller hasn't set custom locations, provide defaults
+    if (locations.isEmpty) {
+      return const [
+        DropdownMenuItem(
+          value: 'Activity Center',
+          child: Text('Activity Center'),
+        ),
+        DropdownMenuItem(value: 'Canteen', child: Text('Canteen')),
+      ];
+    }
+
+    // use the seller's custom pickup locations
+    return locations
+        .map((loc) => DropdownMenuItem(value: loc, child: Text(loc)))
+        .toList();
   }
 
-  int _cartItemCount() {
-    return _cart.values.map((e) => e.qty).fold(0, (a, b) => a + b);
+  // update qty in cart (+1 or -1). removes item if qty drops to 0
+  void _updateQty(String itemId, int delta) {
+    setState(() {
+      final current = _cart[itemId];
+      if (current == null) return;
+
+      final newQty = current.qty + delta;
+      if (newQty <= 0) {
+        _cart.remove(itemId); // remove if qty goes to 0
+      } else {
+        _cart[itemId] = current.copyWith(qty: newQty);
+      }
+    });
   }
 
+  // --------------------------------------------------------------------------
+  // opens the cart bottom sheet with checkout form
+  // --------------------------------------------------------------------------
   void _openCartSheet() {
     showModalBottomSheet(
       context: context,
-      isScrollControlled: true,
+      isScrollControlled: true, // allows sheet to resize with keyboard
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
       ),
       builder: (context) {
         return Padding(
+          // padding for keyboard
           padding: EdgeInsets.only(
             bottom: MediaQuery.of(context).viewInsets.bottom,
           ),
@@ -407,6 +495,7 @@ class _KitchenMenuScreenState extends State<KitchenMenuScreen>
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+                      // header
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
@@ -424,12 +513,15 @@ class _KitchenMenuScreenState extends State<KitchenMenuScreen>
                         ],
                       ),
                       const SizedBox(height: 12),
+
+                      // cart contents
                       if (_cart.isEmpty)
                         const Padding(
                           padding: EdgeInsets.symmetric(vertical: 20),
                           child: Text('Cart is empty.'),
                         )
                       else ...[
+                        // cart items with +/- buttons
                         ..._cart.values.map(
                           (entry) => ListTile(
                             contentPadding: EdgeInsets.zero,
@@ -454,7 +546,10 @@ class _KitchenMenuScreenState extends State<KitchenMenuScreen>
                             ),
                           ),
                         ),
+
                         const Divider(),
+
+                        // total row
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
@@ -470,12 +565,14 @@ class _KitchenMenuScreenState extends State<KitchenMenuScreen>
                               style: const TextStyle(
                                 fontSize: 16,
                                 fontWeight: FontWeight.w700,
-                                color: Colors.deepOrange,
+                                color: _kAccentColor,
                               ),
                             ),
                           ],
                         ),
                         const SizedBox(height: 16),
+
+                        // checkout form: name input
                         TextField(
                           controller: _nameController,
                           decoration: const InputDecoration(
@@ -484,6 +581,9 @@ class _KitchenMenuScreenState extends State<KitchenMenuScreen>
                           ),
                         ),
                         const SizedBox(height: 12),
+
+                        // pickup station dropdown - uses kitchen's custom locations
+                        // if no custom locations set, show a default option
                         InputDecorator(
                           decoration: const InputDecoration(
                             labelText: 'Pickup station',
@@ -492,32 +592,25 @@ class _KitchenMenuScreenState extends State<KitchenMenuScreen>
                           child: DropdownButtonHideUnderline(
                             child: DropdownButton<String>(
                               value: _pickupStation,
-                              items: const [
-                                DropdownMenuItem(
-                                  value: 'Activity Center',
-                                  child: Text('Activity Center'),
-                                ),
-                                DropdownMenuItem(
-                                  value: 'Canteen',
-                                  child: Text('Canteen'),
-                                ),
-                              ],
+                              hint: const Text('Select pickup location'),
+                              isExpanded: true,
+                              items: _buildPickupLocationItems(),
                               onChanged: (value) {
                                 if (value != null) {
-                                  setState(() {
-                                    _pickupStation = value;
-                                  });
+                                  setState(() => _pickupStation = value);
                                 }
                               },
                             ),
                           ),
                         ),
                         const SizedBox(height: 16),
+
+                        // checkout button
                         SizedBox(
                           width: double.infinity,
                           child: ElevatedButton(
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.deepOrange,
+                              backgroundColor: _kAccentColor,
                               padding: const EdgeInsets.symmetric(vertical: 12),
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(12),
@@ -545,29 +638,30 @@ class _KitchenMenuScreenState extends State<KitchenMenuScreen>
     );
   }
 
-  void _updateQty(String itemId, int delta) {
-    setState(() {
-      final current = _cart[itemId];
-      if (current == null) return;
-      final newQty = current.qty + delta;
-      if (newQty <= 0) {
-        _cart.remove(itemId);
-      } else {
-        _cart[itemId] = current.copyWith(qty: newQty);
-      }
-    });
-  }
-
+  // --------------------------------------------------------------------------
+  // creates the order in firestore and clears cart
+  // --------------------------------------------------------------------------
   void _handleCheckout() {
     if (_cart.isEmpty) {
       Navigator.pop(context);
       return;
     }
 
+    // validate that pickup location is selected
+    if (_pickupStation == null || _pickupStation!.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please select a pickup location')),
+      );
+      return;
+    }
+
+    // get current user (for userId in the order)
     final userId = FirebaseAuth.instance.currentUser?.uid ?? '';
     final name = _nameController.text.trim();
     final total = _cartTotal();
+    final pickup = _pickupStation!; // safe to use ! after validation
 
+    // convert cart entries to KitchenOrderItem objects
     final orderItems = _cart.values
         .map(
           (e) => KitchenOrderItem(
@@ -579,46 +673,58 @@ class _KitchenMenuScreenState extends State<KitchenMenuScreen>
           ),
         )
         .toList();
+
+    // build the order object
     final order = KitchenOrder(
-      id: '',
+      id: '', // firestore autogenerates this
       kitchenId: widget.kitchen.id,
       kitchenName: widget.kitchen.name,
       userId: userId,
       ownerId: widget.kitchen.ownerId,
       customerName: name.isEmpty ? 'Guest' : name,
-      pickupLocation: _pickupStation,
-      status: 'pending',
+      pickupLocation: pickup,
+      status: 'pending', // starts as pending
       total: total,
       items: orderItems,
       createdAt: DateTime.now(),
     );
 
+    // save to firestore
     _vendorService.createOrder(order);
 
+    // close the sheet
     Navigator.pop(context);
 
+    // show confirmation
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(
-          'Order placed for ${name.isEmpty ? 'Guest' : name} at $_pickupStation. Total ₱${total.toStringAsFixed(2)}',
+          'Order placed for ${name.isEmpty ? 'Guest' : name} at $pickup. Total ₱${total.toStringAsFixed(2)}',
         ),
       ),
     );
 
+    // reset cart and form
     setState(() {
       _cart.clear();
       _nameController.clear();
-      _pickupStation = 'Activity Center';
+      _pickupStation = null; // reset to null so user must select again
     });
   }
 }
 
+// ============================================================================
+// _CartEntry - helper class to store item + quantity in cart
+// ============================================================================
+// using a class instead of just qty makes it easy to access item details
+// (name, price, etc.) when displaying the cart
 class _CartEntry {
-  _CartEntry({required this.item, required this.qty});
-
   final KitchenItem item;
   final int qty;
 
+  _CartEntry({required this.item, required this.qty});
+
+  // copyWith lets us create a new entry with updated qty (immutable pattern)
   _CartEntry copyWith({KitchenItem? item, int? qty}) {
     return _CartEntry(item: item ?? this.item, qty: qty ?? this.qty);
   }
