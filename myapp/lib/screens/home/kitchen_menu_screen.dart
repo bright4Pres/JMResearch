@@ -90,7 +90,7 @@ class _KitchenMenuScreenState extends State<KitchenMenuScreen>
                   // kitchen info
                   SafeArea(
                     child: Padding(
-                      padding: const EdgeInsets.fromLTRB(20, 60, 20, 20),
+                      padding: const EdgeInsets.fromLTRB(20, 60, 20, 80),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         mainAxisAlignment: MainAxisAlignment.end,

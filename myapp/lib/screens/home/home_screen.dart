@@ -362,6 +362,8 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                 hintStyle: AppTypography.bodyMedium.copyWith(
                   color: AppColors.textHint,
                 ),
+                filled: true,
+                fillColor: Colors.white,
                 border: InputBorder.none,
                 contentPadding: const EdgeInsets.symmetric(vertical: 12),
               ),
@@ -388,18 +390,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
               ),
             )
           else
-            Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: AppColors.surfaceVariant,
-                borderRadius: AppRadius.smallRadius,
-              ),
-              child: Icon(
-                Icons.tune_rounded,
-                size: 18,
-                color: AppColors.textSecondary,
-              ),
-            ),
+            Container(padding: const EdgeInsets.all(8)),
         ],
       ),
     );

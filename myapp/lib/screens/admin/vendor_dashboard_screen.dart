@@ -6,9 +6,12 @@
 // ============================================================================
 
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../../services/vendor_kitchen_service.dart';
 import '../../services/user_service.dart';
+import '../../services/auth.dart';
 import '../../theme/app_theme.dart';
+import '../home/edit_profile_screen.dart';
 import 'create_kitchen_screen.dart';
 import 'kitchen_detail_screen.dart';
 
@@ -23,7 +26,9 @@ class _VendorDashboardScreenState extends State<VendorDashboardScreen>
     with SingleTickerProviderStateMixin {
   final VendorKitchenService _vendorService = VendorKitchenService();
   final UserService _userService = UserService();
+  final AuthService _auth = AuthService();
   String? currentUserId;
+  User? currentUser;
 
   late AnimationController _animationController;
 
@@ -31,6 +36,7 @@ class _VendorDashboardScreenState extends State<VendorDashboardScreen>
   void initState() {
     super.initState();
     _getCurrentUser();
+    currentUser = FirebaseAuth.instance.currentUser;
     _animationController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 800),
@@ -62,6 +68,7 @@ class _VendorDashboardScreenState extends State<VendorDashboardScreen>
 
     return Scaffold(
       backgroundColor: AppColors.background,
+      drawer: _buildDrawer(),
       body: StreamBuilder<List<Kitchen>>(
         stream: _vendorService.getKitchensByOwner(currentUserId!),
         builder: (context, snapshot) {
@@ -115,20 +122,25 @@ class _VendorDashboardScreenState extends State<VendorDashboardScreen>
       pinned: true,
       elevation: 0,
       backgroundColor: AppColors.primary,
-      leading: IconButton(
-        icon: Container(
+      leading: Builder(
+        builder: (context) => Padding(
           padding: const EdgeInsets.all(8),
-          decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: 0.2),
-            borderRadius: AppRadius.smallRadius,
-          ),
-          child: const Icon(
-            Icons.arrow_back_ios_new,
-            color: Colors.white,
-            size: 18,
+          child: GestureDetector(
+            onTap: () => Scaffold.of(context).openDrawer(),
+            child: Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.2),
+                borderRadius: AppRadius.smallRadius,
+              ),
+              child: const Icon(
+                Icons.menu_rounded,
+                color: Colors.white,
+                size: 20,
+              ),
+            ),
           ),
         ),
-        onPressed: () => Navigator.pop(context),
       ),
       flexibleSpace: FlexibleSpaceBar(
         background: Container(
@@ -392,15 +404,11 @@ class _VendorDashboardScreenState extends State<VendorDashboardScreen>
   // FAB
   // --------------------------------------------------------------------------
   Widget _buildFAB() {
-    return FloatingActionButton.extended(
+    return FloatingActionButton(
       onPressed: _createNewKitchen,
       backgroundColor: AppColors.primary,
       elevation: 4,
-      icon: const Icon(Icons.add_business, color: Colors.white),
-      label: Text(
-        'New Kitchen',
-        style: AppTypography.button.copyWith(color: Colors.white),
-      ),
+      child: const Icon(Icons.add_business, color: Colors.white),
     );
   }
 
@@ -416,6 +424,267 @@ class _VendorDashboardScreenState extends State<VendorDashboardScreen>
       context,
       MaterialPageRoute(
         builder: (context) => KitchenDetailScreen(kitchen: kitchen),
+      ),
+    );
+  }
+
+  // --------------------------------------------------------------------------
+  // Drawer - Vendor Menu
+  // --------------------------------------------------------------------------
+  Widget _buildDrawer() {
+    return Drawer(
+      backgroundColor: AppColors.surface,
+      child: Column(
+        children: [
+          // drawer header with gradient
+          _buildDrawerHeader(),
+          // menu items
+          Expanded(
+            child: ListView(
+              padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
+              children: [
+                _buildDrawerItem(
+                  icon: Icons.person_outline_rounded,
+                  title: 'Edit Profile',
+                  onTap: () {
+                    Navigator.pop(context);
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const EditProfileScreen(),
+                      ),
+                    );
+                  },
+                ),
+                _buildDrawerItem(
+                  icon: Icons.store_mall_directory_outlined,
+                  title: 'My Kitchens',
+                  onTap: () => Navigator.pop(context),
+                ),
+                _buildDrawerItem(
+                  icon: Icons.add_business_outlined,
+                  title: 'Create Kitchen',
+                  onTap: () {
+                    Navigator.pop(context);
+                    _createNewKitchen();
+                  },
+                ),
+                const Padding(
+                  padding: EdgeInsets.symmetric(
+                    horizontal: AppSpacing.lg,
+                    vertical: AppSpacing.sm,
+                  ),
+                  child: Divider(),
+                ),
+                _buildDrawerItem(
+                  icon: Icons.settings_outlined,
+                  title: 'Settings',
+                  onTap: () => Navigator.pop(context),
+                ),
+                _buildDrawerItem(
+                  icon: Icons.help_outline_rounded,
+                  title: 'Help & Support',
+                  onTap: () => Navigator.pop(context),
+                ),
+                const Padding(
+                  padding: EdgeInsets.symmetric(
+                    horizontal: AppSpacing.lg,
+                    vertical: AppSpacing.sm,
+                  ),
+                  child: Divider(),
+                ),
+                _buildDrawerItem(
+                  icon: Icons.logout_rounded,
+                  title: 'Sign Out',
+                  isDestructive: true,
+                  onTap: () {
+                    Navigator.pop(context);
+                    _showSignOutDialog();
+                  },
+                ),
+              ],
+            ),
+          ),
+          // app version footer
+          Container(
+            padding: const EdgeInsets.all(AppSpacing.md),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.restaurant, size: 16, color: AppColors.textHint),
+                const SizedBox(width: 8),
+                Text('Iskaon v1.0.0', style: AppTypography.caption),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDrawerHeader() {
+    return Container(
+      width: double.infinity,
+      padding: EdgeInsets.only(
+        top: MediaQuery.of(context).padding.top + AppSpacing.lg,
+        left: AppSpacing.lg,
+        right: AppSpacing.lg,
+        bottom: AppSpacing.lg,
+      ),
+      decoration: const BoxDecoration(gradient: AppColors.warmGradient),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // profile pic
+          Container(
+            width: 72,
+            height: 72,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              border: Border.all(color: Colors.white, width: 3),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.2),
+                  blurRadius: 8,
+                ),
+              ],
+              image: const DecorationImage(
+                image: AssetImage('assets/images/profile.jpg'),
+                fit: BoxFit.cover,
+              ),
+            ),
+          ),
+          const SizedBox(height: AppSpacing.md),
+          // name
+          Text(
+            currentUser?.displayName ?? 'Vendor',
+            style: AppTypography.h3.copyWith(color: Colors.white),
+          ),
+          const SizedBox(height: 4),
+          // email
+          Text(
+            currentUser?.email ?? 'No email',
+            style: AppTypography.bodySmall.copyWith(
+              color: Colors.white.withValues(alpha: 0.8),
+            ),
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          // vendor badge
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.2),
+              borderRadius: BorderRadius.circular(AppRadius.full),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(Icons.store, size: 16, color: Colors.white),
+                const SizedBox(width: 6),
+                Text(
+                  'VENDOR',
+                  style: AppTypography.caption.copyWith(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDrawerItem({
+    required IconData icon,
+    required String title,
+    required VoidCallback onTap,
+    bool isDestructive = false,
+  }) {
+    final color = isDestructive ? AppColors.error : AppColors.textPrimary;
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm),
+      child: ListTile(
+        leading: Container(
+          width: 40,
+          height: 40,
+          decoration: BoxDecoration(
+            color: (isDestructive ? AppColors.error : AppColors.primary)
+                .withValues(alpha: 0.1),
+            borderRadius: AppRadius.smallRadius,
+          ),
+          child: Icon(
+            icon,
+            color: isDestructive ? AppColors.error : AppColors.primary,
+            size: 22,
+          ),
+        ),
+        title: Text(
+          title,
+          style: AppTypography.bodyLarge.copyWith(
+            color: color,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+        onTap: onTap,
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.md,
+          vertical: AppSpacing.xs,
+        ),
+        shape: RoundedRectangleBorder(borderRadius: AppRadius.smallRadius),
+      ),
+    );
+  }
+
+  // --------------------------------------------------------------------------
+  // Sign Out Dialog
+  // --------------------------------------------------------------------------
+  void _showSignOutDialog() {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: AppRadius.xlRadius),
+        title: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: AppColors.error.withValues(alpha: 0.1),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.logout_rounded, color: AppColors.error),
+            ),
+            const SizedBox(width: AppSpacing.md),
+            const Text('Sign Out'),
+          ],
+        ),
+        content: Text(
+          'Are you sure you want to sign out of your account?',
+          style: AppTypography.bodyMedium,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: Text(
+              'Cancel',
+              style: TextStyle(color: AppColors.textSecondary),
+            ),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.error),
+            onPressed: () async {
+              final navigator = Navigator.of(ctx);
+              await _auth.signOut();
+              navigator.pop();
+            },
+            child: const Text(
+              'Sign Out',
+              style: TextStyle(color: Colors.white),
+            ),
+          ),
+        ],
       ),
     );
   }

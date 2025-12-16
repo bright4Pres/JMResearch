@@ -71,7 +71,7 @@ class _OrdersScreenState extends State<OrdersScreen>
                 ),
                 child: SafeArea(
                   child: Padding(
-                    padding: const EdgeInsets.fromLTRB(20, 50, 20, 20),
+                    padding: const EdgeInsets.fromLTRB(20, 50, 20, 80),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       mainAxisAlignment: MainAxisAlignment.end,
