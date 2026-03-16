@@ -616,7 +616,7 @@ class _KitchenMenuScreenState extends State<KitchenMenuScreen>
     );
   }
 
-  void _handleCheckout() {
+  Future<void> _handleCheckout() async {
     if (_cart.isEmpty) {
       Navigator.pop(context);
       return;
@@ -669,9 +669,29 @@ class _KitchenMenuScreenState extends State<KitchenMenuScreen>
       total: total,
       items: orderItems,
       createdAt: DateTime.now(),
+      orderNumber: 0,
     );
 
-    _vendorService.createOrder(order);
+    final success = await _vendorService.createOrder(order);
+
+    if (!success) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Row(
+            children: [
+              Icon(Icons.error_outline, color: Colors.white),
+              SizedBox(width: 8),
+              Text('Failed to place order. Please try again.'),
+            ],
+          ),
+          backgroundColor: AppColors.error,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: AppRadius.smallRadius),
+        ),
+      );
+      return; // don't show success dialog if it failed
+    }
+    
     Navigator.pop(context);
 
     // success dialog

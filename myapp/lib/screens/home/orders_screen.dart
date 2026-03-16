@@ -37,6 +37,7 @@ class _OrdersScreenState extends State<OrdersScreen>
   @override
   Widget build(BuildContext context) {
     final userId = FirebaseAuth.instance.currentUser?.uid ?? '';
+    print('OrderScreen userId: $userId'); // Debug print to verify user ID
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -538,6 +539,17 @@ class _OrderDetailsSheet extends StatelessWidget {
                             ),
                           ),
                         ],
+                      ), const SizedBox(height: AppSpacing.md),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: _buildInfoCard(
+                              icon: Icons.receipt_long_rounded,
+                              label: 'Order Number',
+                              value: '#${order.orderNumber}',
+                            ),
+                          ),
+                        ], 
                       ),
                       const SizedBox(height: AppSpacing.lg),
 

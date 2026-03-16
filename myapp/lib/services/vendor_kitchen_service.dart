@@ -127,9 +127,44 @@ class VendorKitchenService {
   // Orders
   Future<bool> createOrder(KitchenOrder order) async {
     try {
-      await _firestore.collection('orders').add(order.toMap());
+      final firestore = FirebaseFirestore.instance;
+      final counterRef = firestore.collection('counters').doc('orders');
+      final ordersRef = firestore.collection('orders');
+
+
+      //await _firestore.collection('orders').add(order.toMap());
+      await _firestore.runTransaction((transaction) async {
+      
+        final counterSnap = await transaction.get(counterRef);
+
+
+        // get current counter
+        int nextNumber = 1;
+        if (counterSnap.exists) {
+          nextNumber = (counterSnap.data()?['lastOrderNumber'] ?? 0) + 1;
+        } 
+
+        // reset to 1 after 100
+        if (nextNumber > 100) nextNumber = 1;
+
+        //create order with number
+        final newOrderRef = ordersRef.doc();
+        transaction.set(newOrderRef, {
+          ...order.toMap(),
+          'orderNumber': nextNumber,
+        });
+
+        // update counter
+        transaction.set(counterRef, {
+          'lastOrderNumber': nextNumber,
+        }, SetOptions(merge: true));
+      });
+      
       return true;
     } catch (e) {
+      print('Sigma ====================');
+      print('createOrder error: $e');
+      print('Sigma ====================');
       return false;
     }
   }
@@ -387,6 +422,7 @@ class KitchenOrder {
     required this.total,
     required this.items,
     required this.createdAt,
+    this.orderNumber = 0,
   });
 
   final String id;
@@ -400,6 +436,7 @@ class KitchenOrder {
   final double total;
   final List<KitchenOrderItem> items;
   final DateTime createdAt;
+  final int orderNumber; // for display purposes, not unique ID
 
   Map<String, dynamic> toMap() {
     return {
@@ -413,6 +450,7 @@ class KitchenOrder {
       'total': total,
       'items': items.map((e) => e.toMap()).toList(),
       'createdAt': Timestamp.fromDate(createdAt),
+      'orderNumber': orderNumber,
     };
   }
 
@@ -432,6 +470,7 @@ class KitchenOrder {
           .map((e) => KitchenOrderItem.fromMap(e as Map<String, dynamic>))
           .toList(),
       createdAt: (data['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
+      orderNumber: (data['orderNumber'] ?? 0).toInt(),
     );
   }
 }

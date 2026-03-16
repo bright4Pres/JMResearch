@@ -117,7 +117,7 @@ class _VendorDashboardScreenState extends State<VendorDashboardScreen>
   // --------------------------------------------------------------------------
   Widget _buildAppBar(int kitchenCount) {
     return SliverAppBar(
-      expandedHeight: 180,
+      expandedHeight: 240,
       floating: false,
       pinned: true,
       elevation: 0,
@@ -468,7 +468,7 @@ class _VendorDashboardScreenState extends State<VendorDashboardScreen>
                     Navigator.pop(context);
                     _createNewKitchen();
                   },
-                ),
+                ),/*
                 const Padding(
                   padding: EdgeInsets.symmetric(
                     horizontal: AppSpacing.lg,
@@ -485,7 +485,7 @@ class _VendorDashboardScreenState extends State<VendorDashboardScreen>
                   icon: Icons.help_outline_rounded,
                   title: 'Help & Support',
                   onTap: () => Navigator.pop(context),
-                ),
+                ),*/
                 const Padding(
                   padding: EdgeInsets.symmetric(
                     horizontal: AppSpacing.lg,

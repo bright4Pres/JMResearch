@@ -718,7 +718,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                     );
                   },
                 ),
-                const Padding(
+                /*const Padding(
                   padding: EdgeInsets.symmetric(
                     horizontal: AppSpacing.lg,
                     vertical: AppSpacing.sm,
@@ -734,7 +734,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                   icon: Icons.help_outline_rounded,
                   title: 'Help & Support',
                   onTap: () => Navigator.pop(context),
-                ),
+                ),*/
                 const Padding(
                   padding: EdgeInsets.symmetric(
                     horizontal: AppSpacing.lg,
