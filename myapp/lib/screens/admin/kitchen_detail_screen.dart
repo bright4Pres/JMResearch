@@ -563,16 +563,19 @@ class _KitchenDetailScreenState extends State<KitchenDetailScreen>
                                   ),
                                   borderRadius: AppRadius.smallRadius,
                                 ),
-                                child: Text(
-                                  '${order.orderNumber}x',
-                                  style: AppTypography.caption.copyWith(
-                                    color: AppColors.primary,
-                                    fontWeight: FontWeight.w600,
-                                  ),
+                                child: Icon(
+                                  Icons.receipt_long_rounded,
+                                  color: AppColors.primaryDark,
+                                  size: 18,
                                 ),
                               ),
                               const SizedBox(width: 8),
-                              Text(item.name, style: AppTypography.bodyMedium),
+                              Text(
+                                '#${order.orderNumber}',
+                                style: AppTypography.bodyMedium.copyWith(
+                                  fontSize: 18,
+                                ),
+                              ),
                             ],
                           ),
                         ],
