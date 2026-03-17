@@ -1,4 +1,5 @@
 import 'dart:io';
+//import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../services/vendor_kitchen_service.dart';
@@ -106,7 +107,54 @@ class _CreateKitchenScreenState extends State<CreateKitchenScreen> {
               const SizedBox(height: 24),
 
               // Image Picker
-              
+              GestureDetector(
+                onTap: _isLoading ? null : _pickImage,
+                child: Container(
+                  width: double.infinity,
+                  height: 160,
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(12),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.1),
+                        blurRadius: 4,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                    image: _selectedImage != null
+                        ? DecorationImage(
+                          image: FileImage(_selectedImage!),
+                          fit: BoxFit.cover,
+                          )
+                        : null,
+                  ),
+                  child: _selectedImage == null
+                      ? Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(
+                              Icons.add_photo_alternate,
+                              size: 48,
+                              color: Colors.deepOrange,
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              'Tap to add kitchen image',
+                              style: TextStyle(
+                                color: Colors.grey[600],
+                                fontSize: 14,
+                              ),
+                            ),
+                          ],
+                      )
+                      : _isLoading
+                          ? const Center(child: CircularProgressIndicator())
+                          :null,
+                ),
+
+
+              ),
 
               const SizedBox(height: 20),
 
@@ -229,13 +277,36 @@ class _CreateKitchenScreenState extends State<CreateKitchenScreen> {
 
   Future<void> _pickImage() async{
     final picker = ImagePicker();
-    final picked = await picker.pickImage(\
+    final picked = await picker.pickImage(
       source: ImageSource.gallery,
       maxWidth: 800,
       maxHeight: 800, 
       imageQuality: 80,
     );
-  
+
+
+    if (picked != null) {
+      setState(() {
+        _selectedImage = File(picked.path);
+        _isLoading = true;
+      });
+
+      final url = await CloudinaryService.uploadImage(
+        _selectedImage!,
+        folder: 'iskaon/kitchens',
+      );
+
+      setState(() {
+        _imageUrl = url;
+        _isLoading = false;
+      });
+
+      if (url == null) {
+        _showSnackBar('Failed to upload image. Try again.', Colors.red);
+      } else {
+        _showSnackBar('Image uploaded successfully', Colors.green);
+      }
+    }
   }
 
   void _submitForm() async {
@@ -260,6 +331,7 @@ class _CreateKitchenScreenState extends State<CreateKitchenScreen> {
         ownerId: currentUser.uid,
         ownerName: currentUser.displayName ?? currentUser.email ?? 'Unknown',
         createdAt: DateTime.now(),
+        imageUrl: _imageUrl,
       );
 
       final success = await _vendorService.createKitchen(kitchen);
