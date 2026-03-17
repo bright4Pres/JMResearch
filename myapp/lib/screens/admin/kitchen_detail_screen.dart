@@ -540,6 +540,47 @@ class _KitchenDetailScreenState extends State<KitchenDetailScreen>
                       ),
                     ),
                   ),
+
+                  //Shows the Order Number in the Vendor's Side
+                  Text('Order Number', style: AppTypography.caption),
+                  const SizedBox(height: AppSpacing.sm),
+                  ...order.items.map(
+                    (item) => Padding(
+                      padding: const EdgeInsets.only(bottom: 4),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Row(
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 8,
+                                  vertical: 2,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: AppColors.primary.withValues(
+                                    alpha: 0.1,
+                                  ),
+                                  borderRadius: AppRadius.smallRadius,
+                                ),
+                                child: Text(
+                                  '${order.orderNumber}x',
+                                  style: AppTypography.caption.copyWith(
+                                    color: AppColors.primary,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              Text(item.name, style: AppTypography.bodyMedium),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+
+
                   const SizedBox(height: AppSpacing.md),
                   // action buttons
                   if (isPending ||
