@@ -1,19 +1,21 @@
 import 'dart:io';
 import 'package:cloudinary_public/cloudinary_public.dart';
 
+// ===================================================================
+// CloudinaryService Class
+// ===================================================================
 
 class CloudinaryService {
-
   static const _cloudName = 'dmeua1qwh';
   static const _uploadPreset = 'iskaon_preset';
 
   static final CloudinaryPublic _cloudinary = CloudinaryPublic(
     _cloudName, 
     _uploadPreset, 
-    cache: false); 
+    cache: false
+  ); 
 
   static Future<String?> uploadImage(File imageFile, {String folder = 'iskaon'}) async{
-
     try {
       final response = await _cloudinary.uploadFile(
         CloudinaryFile.fromFile(
@@ -23,9 +25,7 @@ class CloudinaryService {
         ),
       );
       return response.secureUrl;
-    }
-
-    catch (e) {
+    } catch (e) {
       print('Error uploading image: $e');
       return null;
     }

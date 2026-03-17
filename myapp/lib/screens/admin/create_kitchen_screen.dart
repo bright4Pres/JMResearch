@@ -1,6 +1,8 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import '../../services/vendor_kitchen_service.dart';
 import '../../services/user_service.dart';
+import '../../services/cloudinary_service.dart';
 
 class CreateKitchenScreen extends StatefulWidget {
   const CreateKitchenScreen({super.key});
@@ -17,6 +19,8 @@ class _CreateKitchenScreenState extends State<CreateKitchenScreen> {
   final VendorKitchenService _vendorService = VendorKitchenService();
   final UserService _userService = UserService();
   bool _isLoading = false;
+  File? _selectedImage;
+  String? _imageUrl;
 
   @override
   void dispose() {
@@ -99,6 +103,52 @@ class _CreateKitchenScreenState extends State<CreateKitchenScreen> {
                 ),
               ),
               const SizedBox(height: 24),
+
+              // Image Picker
+              GestureDetector(
+                onTap: _isLoading ? null : _pickImage,
+                child: Container(
+                  width: double.infinity,
+                  height: 160,
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(12),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.1),
+                        blurRadius: 4,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                    image: _selectedImage != null
+                        ? DecorationImage(
+                            image: FileImage(_selectedImage!),
+                            fit: BoxFit.cover,
+                          )
+                        : null,
+                  ),
+                ), child: selectedImage == null
+                    ? Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.add_photo_alternate,
+                        size:48,
+                        color: Colors.deepOrange,
+                        ),
+                        const SizedBox(height: 8,),
+                        Text(
+                          'Tap to add kitchen image',
+                          style: TextStyle(
+                            color: Colors.grey[600],
+                            fontSize: 14,
+                          ),
+                        ),
+                      ],
+                      : _isLoading
+                        ? const Center(child: CircularProgressIndicator(),)
+                        :null,
+                    )   
+              ),
 
               const SizedBox(height: 20),
 
@@ -217,6 +267,11 @@ class _CreateKitchenScreenState extends State<CreateKitchenScreen> {
         ),
       ),
     );
+
+
+    Future<void> _pickImage() async{
+      return 0;
+    }
   }
 
   void _submitForm() async {
