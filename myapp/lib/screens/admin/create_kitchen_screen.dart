@@ -2,6 +2,7 @@ import 'dart:io';
 //import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:myapp/theme/app_theme.dart';
 import '../../services/vendor_kitchen_service.dart';
 import '../../services/user_service.dart';
 import '../../services/cloudinary_service.dart';
@@ -23,6 +24,7 @@ class _CreateKitchenScreenState extends State<CreateKitchenScreen> {
   bool _isLoading = false;
   File? _selectedImage;
   String? _imageUrl;
+  String? _imagePublicId;
 
   @override
   void dispose() {
@@ -64,6 +66,7 @@ class _CreateKitchenScreenState extends State<CreateKitchenScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
+
               // Welcome Card
               Container(
                 padding: const EdgeInsets.all(20),
@@ -82,14 +85,14 @@ class _CreateKitchenScreenState extends State<CreateKitchenScreen> {
                   children: [
                     Icon(
                       Icons.restaurant_menu,
-                      size: 60,
+                      size: 30,
                       color: Colors.deepOrange,
                     ),
                     const SizedBox(height: 12),
                     Text(
-                      'become a kitchen vendor at pisay zrc',
+                      'Be a Vendor in Pisay!!',
                       style: TextStyle(
-                        fontSize: 20,
+                        fontSize: 18,
                         fontWeight: FontWeight.bold,
                         color: Colors.deepOrange[700],
                       ),
@@ -97,21 +100,28 @@ class _CreateKitchenScreenState extends State<CreateKitchenScreen> {
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      'create your own kitchen.',
-                      style: TextStyle(fontSize: 14, color: Colors.grey[600]),
+                      'Create your own kitchen.',
+                      style: TextStyle(fontSize: 12, color: Colors.grey[600]),
                       textAlign: TextAlign.center,
                     ),
                   ],
                 ),
               ),
-              const SizedBox(height: 24),
 
-              // Image Picker
+              const SizedBox(height: 5),
+              Divider(
+                thickness: 1,
+                height: 20,
+                color: AppColors.textPrimary,
+              ),
+              const SizedBox(height: 5),
+              
+              //Image Picker
               GestureDetector(
                 onTap: _isLoading ? null : _pickImage,
                 child: Container(
                   width: double.infinity,
-                  height: 160,
+                  height: 100,
                   decoration: BoxDecoration(
                     color: Colors.white,
                     borderRadius: BorderRadius.circular(12),
@@ -135,7 +145,7 @@ class _CreateKitchenScreenState extends State<CreateKitchenScreen> {
                           children: [
                             Icon(
                               Icons.add_photo_alternate,
-                              size: 48,
+                              size: 40,
                               color: Colors.deepOrange,
                             ),
                             const SizedBox(height: 8),
@@ -143,7 +153,7 @@ class _CreateKitchenScreenState extends State<CreateKitchenScreen> {
                               'Tap to add kitchen image',
                               style: TextStyle(
                                 color: Colors.grey[600],
-                                fontSize: 14,
+                                fontSize: 12,
                               ),
                             ),
                           ],
@@ -152,11 +162,9 @@ class _CreateKitchenScreenState extends State<CreateKitchenScreen> {
                           ? const Center(child: CircularProgressIndicator())
                           :null,
                 ),
-
-
               ),
 
-              const SizedBox(height: 20),
+              const SizedBox(height: 16),
 
               // Kitchen Name
               _buildTextField(
@@ -193,7 +201,14 @@ class _CreateKitchenScreenState extends State<CreateKitchenScreen> {
                   return null;
                 },
               ),
-              const SizedBox(height: 32),
+              const SizedBox(height: 10),
+              Divider(
+                thickness: 1,
+                height: 20,
+                color: AppColors.textPrimary,
+               ),
+
+              const SizedBox(height: 10),
 
               // Create Button
               ElevatedButton(
@@ -291,17 +306,18 @@ class _CreateKitchenScreenState extends State<CreateKitchenScreen> {
         _isLoading = true;
       });
 
-      final url = await CloudinaryService.uploadImage(
+      final result = await CloudinaryService.uploadImage(
         _selectedImage!,
         folder: 'iskaon/kitchens',
       );
 
       setState(() {
-        _imageUrl = url;
+        _imageUrl = result?.url;
+        _imagePublicId = result?.publicId;
         _isLoading = false;
       });
 
-      if (url == null) {
+      if (result == null) {
         _showSnackBar('Failed to upload image. Try again.', Colors.red);
       } else {
         _showSnackBar('Image uploaded successfully', Colors.green);
@@ -332,6 +348,7 @@ class _CreateKitchenScreenState extends State<CreateKitchenScreen> {
         ownerName: currentUser.displayName ?? currentUser.email ?? 'Unknown',
         createdAt: DateTime.now(),
         imageUrl: _imageUrl,
+        imagePublicId: _imagePublicId,
       );
 
       final success = await _vendorService.createKitchen(kitchen);

@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'cloudinary_service.dart';
 
 // ============================================================================
 // Kitchen Model
@@ -14,6 +15,7 @@ class Kitchen {
   final String ownerId; // Staff member who owns this kitchen
   final String ownerName;
   final String? imageUrl;
+  final String? imagePublicId; 
   final bool isActive;
   final DateTime createdAt;
   final Map<String, String>
@@ -27,6 +29,7 @@ class Kitchen {
     required this.ownerId,
     required this.ownerName,
     this.imageUrl,
+    this.imagePublicId,
     this.isActive = true,
     required this.createdAt,
     this.operatingHours = const {},
@@ -42,6 +45,7 @@ class Kitchen {
       ownerId: data['ownerId'] ?? '',
       ownerName: data['ownerName'] ?? '',
       imageUrl: data['imageUrl'],
+      imagePublicId: data['imagePublicId'],
       isActive: data['isActive'] ?? true,
       createdAt: (data['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
       operatingHours: Map<String, String>.from(data['operatingHours'] ?? {}),
@@ -57,6 +61,7 @@ class Kitchen {
       'ownerId': ownerId,
       'ownerName': ownerName,
       'imageUrl': imageUrl,
+      'imagePublicId': imagePublicId,
       'isActive': isActive,
       'createdAt': Timestamp.fromDate(createdAt),
       'operatingHours': operatingHours,
@@ -71,6 +76,7 @@ class KitchenItem {
   final String description;
   final double price;
   final String? imageUrl;
+  final String? imagePublicId;
   final String category; // 'fullmeals' or 'snacks'
   final String kitchenId; // Which kitchen this item belongs to
   final String ownerId; // For easy filtering
@@ -82,7 +88,8 @@ class KitchenItem {
     required this.name,
     required this.description,
     required this.price,
-    this.imageUrl,
+    this.imageUrl,        
+    this.imagePublicId,
     required this.category,
     required this.kitchenId,
     required this.ownerId,
@@ -98,6 +105,7 @@ class KitchenItem {
       description: data['description'] ?? '',
       price: (data['price'] ?? 0).toDouble(),
       imageUrl: data['imageUrl'],
+      imagePublicId: data['imagePublicId'],
       category: data['category'] ?? '',
       kitchenId: data['kitchenId'] ?? '',
       ownerId: data['ownerId'] ?? '',
@@ -112,6 +120,7 @@ class KitchenItem {
       'description': description,
       'price': price,
       'imageUrl': imageUrl,
+      'imagePublicId': imagePublicId,
       'category': category,
       'kitchenId': kitchenId,
       'ownerId': ownerId,
@@ -254,15 +263,17 @@ class VendorKitchenService {
     }
   }
 
-  Future<bool> deleteKitchen(String kitchenId) async {
+  Future<bool> deleteKitchen(String kitchenId, {String? imagePublicId}) async {
     try {
-      // Soft delete by setting isActive to false
-      await _firestore.collection('kitchens').doc(kitchenId).update({
-        'isActive': false,
-        'deletedAt': FieldValue.serverTimestamp(),
-      });
+
+      if (imagePublicId != null) {
+        await CloudinaryService.deleteImage(imagePublicId);
+      }
+
+      await _firestore.collection('kitchens').doc(kitchenId).delete();
       return true;
     } catch (e) {
+      print('Error deleting kitchen: $e');
       return false;
     }
   }

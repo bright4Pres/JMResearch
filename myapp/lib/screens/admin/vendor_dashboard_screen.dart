@@ -22,7 +22,7 @@ class VendorDashboardScreen extends StatefulWidget {
   State<VendorDashboardScreen> createState() => _VendorDashboardScreenState();
 }
 
-class _VendorDashboardScreenState extends State<VendorDashboardScreen>
+class _VendorDashboardScreenState extends State<VendorDashboardScreen>  
     with SingleTickerProviderStateMixin {
   final VendorKitchenService _vendorService = VendorKitchenService();
   final UserService _userService = UserService();
@@ -174,7 +174,7 @@ class _VendorDashboardScreenState extends State<VendorDashboardScreen>
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              'Vendor Dashboard',
+                              'Dashboard',
                               style: AppTypography.h2.copyWith(
                                 color: Colors.white,
                               ),
@@ -303,87 +303,144 @@ class _VendorDashboardScreenState extends State<VendorDashboardScreen>
         decoration: AppDecorations.cardElevated,
         child: Material(
           color: Colors.transparent,
-          child: InkWell(
-            onTap: () => _openKitchenDetail(kitchen),
-            borderRadius: AppRadius.largeRadius,
-            child: Padding(
-              padding: const EdgeInsets.all(AppSpacing.md),
-              child: Row(
-                children: [
-                  // kitchen image/icon
-                  Container(
-                    width: 72,
-                    height: 72,
-                    decoration: BoxDecoration(
-                      gradient: AppColors.warmGradient,
-                      borderRadius: AppRadius.mediumRadius,
-                    ),
-                    child: const Icon(
-                      Icons.restaurant,
-                      color: Colors.white,
-                      size: 32,
-                    ),
-                  ),
-                  const SizedBox(width: AppSpacing.md),
-                  // kitchen details
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            Expanded(
-                              child: Text(
-                                kitchen.name,
-                                style: AppTypography.h4,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ),
-                            StatusBadge(
-                              status: kitchen.isActive ? 'Open' : 'Closed',
-                            ),
-                          ],
+          child: Column(
+            children: [
+              //kitchen image
+              InkWell(
+                onTap: () => _openKitchenDetail(kitchen),
+                borderRadius: const BorderRadius.vertical(
+                  top: Radius.circular(AppRadius.lg),
+                ), child: Container (
+                  height: 125,
+                  width: double.infinity,
+                  decoration: BoxDecoration(
+                    borderRadius: const BorderRadius.vertical(
+                      top: Radius.circular(AppRadius.lg),
+                    ), image: kitchen.imageUrl != null
+                      ? DecorationImage(
+                          image: NetworkImage(kitchen.imageUrl!),
+                          fit: BoxFit.cover,
+                      ) :null,
+                      gradient: kitchen.imageUrl != null
+                      ? AppColors.warmGradient
+                      : null,
+                  ), child: kitchen.imageUrl == null
+                      ? const Center(
+                        child: Icon(
+                          Icons.restaurant,
+                          color: Colors.white,
+                          size: 27,
                         ),
-                        const SizedBox(height: 4),
-                        Text(
-                          kitchen.description,
-                          style: AppTypography.bodySmall,
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        const SizedBox(height: AppSpacing.sm),
-                        // quick stats
-                        Row(
-                          children: [
-                            _buildMiniStat(Icons.inventory_2_outlined, 'Items'),
-                            const SizedBox(width: AppSpacing.md),
-                            _buildMiniStat(
-                              Icons.receipt_long_outlined,
-                              'Orders',
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(width: AppSpacing.sm),
-                  Container(
-                    width: 36,
-                    height: 36,
-                    decoration: BoxDecoration(
-                      color: AppColors.primary.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(AppRadius.full),
-                    ),
-                    child: const Icon(
-                      Icons.arrow_forward_ios,
-                      size: 14,
-                      color: AppColors.primary,
-                    ),
-                  ),
-                ],
+                      ): null,
+                ),
               ),
-            ),
+
+              Padding(
+                padding: const EdgeInsets.all(AppSpacing.md),
+                child: Row(
+                  children: [
+                    
+                    //kitchen icon
+                    Container(
+                      width: 65,
+                      height: 65,
+                      decoration: BoxDecoration(
+                        gradient: AppColors.warmGradient,
+                        borderRadius: AppRadius.mediumRadius,
+                      ), child: const Icon(
+                        Icons.restaurant,
+                        color: Colors.white,
+                        size: 30,
+                      ),
+                    ),
+
+                    const SizedBox(width: AppSpacing.md),
+
+                    //kitchen details
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  kitchen.name,
+                                  style: AppTypography.h4, //try h3
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ), StatusBadge(
+                                  status: kitchen.isActive ? 'Open' : 'Close' ,
+                              ),
+                            ],
+                          ), const SizedBox(height: 3),
+                          Text(
+                            kitchen.description,
+                            style: AppTypography.bodySmall,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                          ), const SizedBox(height: AppSpacing.sm),
+                          Row(
+                            children: [
+                              _buildMiniStat(Icons.inventory_2_outlined, 'Items'),
+                              const SizedBox(width: AppSpacing.md),
+                              _buildMiniStat(Icons.receipt_long_outlined, 'Orders'),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    const SizedBox(width: AppSpacing.sm),
+
+                    //arrow part
+                    GestureDetector(
+                      onTap: () => _openKitchenDetail(kitchen),
+                      child: Container(
+                        width: 36,
+                        height: 36,
+                        decoration: BoxDecoration(
+                          color: AppColors.primary.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(AppRadius.full),
+                        ), child: const Icon(
+                          Icons.arrow_forward_ios,
+                          size: 14,
+                          color: AppColors.primary,
+                        ),
+                      ),
+                    ),
+
+
+                  ],
+                ),
+              ),
+
+              Padding( 
+                padding: const EdgeInsets.fromLTRB(AppSpacing.md, 0, AppSpacing.md, AppSpacing.md),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: AppColors.error,
+                          side: BorderSide(color: AppColors.error.withValues(alpha: 0.5)),
+                          padding: const EdgeInsets.symmetric(vertical: 10),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: AppRadius.smallRadius,
+                          ),
+                        ),
+                        onPressed: () => _showDeleteKitchenDialog(kitchen), 
+                        icon: const Icon(Icons.delete_outline, size: 14),
+                        label: const Text('Delete Kitchen', style: TextStyle(fontSize: 14),),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+  
+
+            ],
           ),
         ),
       ),
@@ -687,5 +744,97 @@ class _VendorDashboardScreenState extends State<VendorDashboardScreen>
         ],
       ),
     );
+  }
+
+  // --------------------------------------------------------------------------
+  // Show Delete Kitchen Confirmation Dialog
+  // --------------------------------------------------------------------------
+  void _showDeleteKitchenDialog(Kitchen kitchen) {
+    showDialog(
+      context: context, 
+      builder: (ctx) => Dialog(
+        shape: RoundedRectangleBorder(borderRadius: AppRadius.xlRadius),
+        child: Padding(
+          padding: const EdgeInsets.all(AppSpacing.lg),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              //warning icon
+              Container(
+                width: 60,
+                height: 60,
+                decoration: BoxDecoration(
+                  color: AppColors.error.withValues(alpha: 0.1),
+                  shape: BoxShape.circle,
+                ), child: const Icon(
+                  Icons.delete_forever,
+                  color: AppColors.error,
+                  size: 30,
+                ),
+              ), const SizedBox(height: AppSpacing.md,),
+              Text('Delete Kitchen?', style: AppTypography.h3 ),
+              const SizedBox(height: AppSpacing.sm),
+              Text(
+                'Are you sure you want to delete the kitchen "${kitchen.name}"? This action cannot be undone.',
+                style: AppTypography.bodyMedium,
+                textAlign: TextAlign.center,
+              ), const SizedBox(height: AppSpacing.lg),
+              Row(
+                children: [  
+                  //cancel button
+                  Expanded(
+                    child: OutlinedButton(
+                      style: AppButtons.secondary,
+                      onPressed: () => Navigator.pop(ctx),
+                      child: const Text('Cancel'),
+                    ),
+                  ), const SizedBox(width: AppSpacing.md),
+                  //confirm delete button
+                  Expanded(
+                    child: ElevatedButton( 
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.error,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: AppRadius.smallRadius,
+                        ),
+                      ), onPressed: () async {
+                        Navigator.pop(ctx);
+                        final success = await _vendorService.deleteKitchen(
+                          kitchen.id,
+                          imagePublicId: kitchen.imagePublicId,
+                          );
+                        if (mounted){
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Row(
+                                children: [
+                                  Icon(success ? Icons.check_circle_outline : Icons.error_outline, color: Colors.white, size: 20,),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    success ? '${kitchen.name} deleted' : 'Failed to delete kitchen',
+                                  ),
+                                ],
+                              ), backgroundColor: success ? AppColors.success : AppColors.error,
+                              behavior: SnackBarBehavior.floating,
+                              shape: RoundedRectangleBorder(borderRadius: AppRadius.smallRadius,),
+                            )
+                          );
+                        }
+                      },
+                      child: const Text('Delete'),
+                    ),
+                  ),
+                
+                ],
+              ),
+
+            ],
+          ),
+        ),
+      )
+    );
+
   }
 }
