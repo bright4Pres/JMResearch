@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import '../../services/vendor_kitchen_service.dart';
 import '../../services/user_service.dart';
 import '../../services/cloudinary_service.dart';
@@ -105,50 +106,7 @@ class _CreateKitchenScreenState extends State<CreateKitchenScreen> {
               const SizedBox(height: 24),
 
               // Image Picker
-              GestureDetector(
-                onTap: _isLoading ? null : _pickImage,
-                child: Container(
-                  width: double.infinity,
-                  height: 160,
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(12),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.1),
-                        blurRadius: 4,
-                        offset: const Offset(0, 2),
-                      ),
-                    ],
-                    image: _selectedImage != null
-                        ? DecorationImage(
-                            image: FileImage(_selectedImage!),
-                            fit: BoxFit.cover,
-                          )
-                        : null,
-                  ),
-                ), child: selectedImage == null
-                    ? Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(Icons.add_photo_alternate,
-                        size:48,
-                        color: Colors.deepOrange,
-                        ),
-                        const SizedBox(height: 8,),
-                        Text(
-                          'Tap to add kitchen image',
-                          style: TextStyle(
-                            color: Colors.grey[600],
-                            fontSize: 14,
-                          ),
-                        ),
-                      ],
-                      : _isLoading
-                        ? const Center(child: CircularProgressIndicator(),)
-                        :null,
-                    )   
-              ),
+              
 
               const SizedBox(height: 20),
 
@@ -267,11 +225,17 @@ class _CreateKitchenScreenState extends State<CreateKitchenScreen> {
         ),
       ),
     );
+  }
 
-
-    Future<void> _pickImage() async{
-      return 0;
-    }
+  Future<void> _pickImage() async{
+    final picker = ImagePicker();
+    final picked = await picker.pickImage(\
+      source: ImageSource.gallery,
+      maxWidth: 800,
+      maxHeight: 800, 
+      imageQuality: 80,
+    );
+  
   }
 
   void _submitForm() async {
