@@ -339,6 +339,11 @@ class _OrdersScreenState extends State<OrdersScreen>
                           Icons.location_on_outlined,
                           order.pickupLocation,
                         ),
+                        const SizedBox(width: AppSpacing.lg),
+                        _buildDetailRow(
+                          Icons.receipt_long_outlined,
+                          'Order #${order.orderNumber}',
+                        ),
                       ],
                     ),
                     const SizedBox(height: AppSpacing.md),
