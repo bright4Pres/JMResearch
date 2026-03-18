@@ -508,63 +508,85 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // kitchen banner with gradient
-            Container(
-              height: 100,
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [
-                    AppColors.primary.withValues(alpha: 0.9),
-                    AppColors.primaryLight.withValues(alpha: 0.7),
-                  ],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
-                borderRadius: const BorderRadius.vertical(
-                  top: Radius.circular(AppRadius.lg),
-                ),
+            SizedBox(
+            height: 100,
+            child: ClipRRect( // ✅ clips the image to rounded corners
+              borderRadius: const BorderRadius.vertical(
+              top: Radius.circular(AppRadius.lg),
               ),
               child: Stack(
+                fit: StackFit.expand, // ✅ forces stack to fill the SizedBox
                 children: [
-                  // background pattern
-                  Positioned.fill(
-                    child: Opacity(
-                      opacity: 0.1,
-                      child: Icon(
-                        Icons.restaurant_menu,
-                        size: 150,
-                        color: Colors.white,
+                  // background — image or gradient
+                  kitchen.imageUrl != null
+                    ? Image.network(
+                      kitchen.imageUrl!,
+                      fit: BoxFit.cover,
+                      errorBuilder: (context, error, stackTrace) => Container(
+                        decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [
+                          AppColors.primary.withValues(alpha: 0.9),
+                          AppColors.primaryLight.withValues(alpha: 0.7),
+                          ],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                          ),
+                        ),
                       ),
-                    ),
+              )
+            : Container(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [
+                      AppColors.primary.withValues(alpha: 0.9),
+                      AppColors.primaryLight.withValues(alpha: 0.7),
+                    ],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
                   ),
-                  // status badge
-                  Positioned(
-                    top: AppSpacing.sm,
-                    right: AppSpacing.sm,
-                    child: StatusBadge(
-                      status: kitchen.isActive ? 'open' : 'closed',
-                    ),
+                ),
+                child: Opacity(
+                  opacity: 0.1,
+                  child: const Icon(
+                    Icons.restaurant_menu,
+                    size: 150,
+                    color: Colors.white,
                   ),
-                  // kitchen icon
-                  Positioned(
-                    bottom: -20,
-                    left: AppSpacing.md,
-                    child: Container(
-                      padding: const EdgeInsets.all(14),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: AppRadius.mediumRadius,
-                        boxShadow: AppShadows.medium,
-                      ),
-                      child: const Icon(
-                        Icons.store_rounded,
-                        color: AppColors.primary,
-                        size: 28,
-                      ),
-                    ),
-                  ),
-                ],
+                ),
               ),
+
+        // status badge — top right
+        Positioned(
+          top: AppSpacing.sm,
+          right: AppSpacing.sm,
+          child: StatusBadge(
+            status: kitchen.isActive ? 'open' : 'closed',
+          ),
+        ),
+
+        // kitchen icon — bottom left, overlapping into details section
+        Positioned(
+          bottom: -20,
+          left: AppSpacing.md,
+          child: Container(
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: AppRadius.mediumRadius,
+              boxShadow: AppShadows.medium,
             ),
+            child: const Icon(
+              Icons.store_rounded,
+              color: AppColors.primary,
+              size: 28,
+            ),
+          ),
+        ),
+      ],
+    ),
+  ),
+),
             // kitchen info
             Padding(
               padding: const EdgeInsets.fromLTRB(

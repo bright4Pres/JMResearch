@@ -445,7 +445,7 @@ class RegisterState extends State<Register>
       });
     } else {
       setState(() {
-        showVerificationMessage = true;
+        //showVerificationMessage = true;
         loading = false;
       });
     }

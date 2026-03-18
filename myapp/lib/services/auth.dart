@@ -21,9 +21,9 @@ class AuthService {
 
   // wrap helper to turn Firebase's user into our AppUser once they verify
   AppUser? _userFromFirebaseUser(User? user) {
-    if (user != null && !user.emailVerified) {
+    /*if (user != null && !user.emailVerified) {
       return null;
-    }
+    }*/
     return user != null ? AppUser(uid: user.uid) : null;
   }
 
@@ -60,11 +60,11 @@ class AuthService {
       );
       final user = result.user;
 
-      // error handling for unverified emails
+      /*// error handling for unverified emails
       if (user != null && !user.emailVerified) {
         await _auth.signOut();
         throw Exception('Please verify your email before signing in');
-      }
+      }*/
 
       return _userFromFirebaseUser(user);
     } catch (e) {
@@ -104,6 +104,7 @@ class AuthService {
         });
         _log('Firestore document created');
 
+        /*
         // sends email verification
         await user.sendEmailVerification();
         _log('Verification email sent');
@@ -111,7 +112,8 @@ class AuthService {
         // signs out so the user verifies email first
         await _auth.signOut();
         _log('User signed out for verification');
-
+        */
+        
         // Return a non-null AppUser to indicate successful registration
         // (even though email is unverified - that's expected for registration)
         return AppUser(uid: user.uid);
