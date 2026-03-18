@@ -130,7 +130,7 @@ class _EditProfileScreenState extends State<EditProfileScreen>
                             ),
                             child: ClipOval(
                               child: Image.asset(
-                                'assets/images/profile.jpg',
+                                'assets/images/User.png',
                                 fit: BoxFit.cover,
                                 errorBuilder: (_, __, ___) => Icon(
                                   Icons.person,

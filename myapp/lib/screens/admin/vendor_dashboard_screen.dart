@@ -606,7 +606,7 @@ class _VendorDashboardScreenState extends State<VendorDashboardScreen>
                 ),
               ],
               image: const DecorationImage(
-                image: AssetImage('assets/images/profile.jpg'),
+                image: AssetImage('assets/images/User.png'),
                 fit: BoxFit.cover,
               ),
             ),

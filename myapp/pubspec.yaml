@@ -105,6 +105,6 @@ flutter:
 flutter_launcher_icons:
   android: true
   ios: true
-  image_path: "assets/images/app_image.jpg"
-  adaptive_icon_foreground: "assets/images/image.jpg"
+  image_path: "assets/images/Iskaon_logo.png"
+  adaptive_icon_foreground: "assets/images/Iskaon_logo.png"
   adaptive_icon_background: "#FF6B35"
