@@ -496,173 +496,149 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   // Kitchen Card - Modern Design
   // --------------------------------------------------------------------------
   Widget _buildKitchenCard(Kitchen kitchen) {
-    return GestureDetector(
-      onTap: () => Navigator.push(
-        context,
-        MaterialPageRoute(builder: (_) => KitchenMenuScreen(kitchen: kitchen)),
-      ),
-      child: Container(
-        margin: const EdgeInsets.only(bottom: AppSpacing.md),
-        decoration: AppDecorations.cardElevated,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // kitchen banner with gradient
-            SizedBox(
-            height: 100,
-            child: ClipRRect( // ✅ clips the image to rounded corners
-              borderRadius: const BorderRadius.vertical(
-              top: Radius.circular(AppRadius.lg),
-              ),
-              child: Stack(
-                fit: StackFit.expand, // ✅ forces stack to fill the SizedBox
-                children: [
-                  // background — image or gradient
-                  kitchen.imageUrl != null
-                    ? Image.network(
-                      kitchen.imageUrl!,
-                      fit: BoxFit.cover,
-                      errorBuilder: (context, error, stackTrace) => Container(
-                        decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: [
-                          AppColors.primary.withValues(alpha: 0.9),
-                          AppColors.primaryLight.withValues(alpha: 0.7),
-                          ],
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                          ),
-                        ),
-                      ),
-              )
-            : Container(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [
-                      AppColors.primary.withValues(alpha: 0.9),
-                      AppColors.primaryLight.withValues(alpha: 0.7),
-                    ],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
-                ),
-                child: Opacity(
-                  opacity: 0.1,
-                  child: const Icon(
-                    Icons.restaurant_menu,
-                    size: 150,
-                    color: Colors.white,
-                  ),
-                ),
-              ),
-
-        // status badge — top right
-        Positioned(
-          top: AppSpacing.sm,
-          right: AppSpacing.sm,
-          child: StatusBadge(
-            status: kitchen.isActive ? 'open' : 'closed',
-          ),
-        ),
-
-        // kitchen icon — bottom left, overlapping into details section
-        Positioned(
-          bottom: -20,
-          left: AppSpacing.md,
-          child: Container(
-            padding: const EdgeInsets.all(14),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: AppRadius.mediumRadius,
-              boxShadow: AppShadows.medium,
-            ),
-            child: const Icon(
-              Icons.store_rounded,
-              color: AppColors.primary,
-              size: 28,
-            ),
-          ),
-        ),
-      ],
+  return GestureDetector(
+    onTap: () => Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => KitchenMenuScreen(kitchen: kitchen)),
     ),
-  ),
-),
-            // kitchen info
-            Padding(
-              padding: const EdgeInsets.fromLTRB(
-                AppSpacing.md,
-                AppSpacing.lg + 8,
-                AppSpacing.md,
-                AppSpacing.md,
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          kitchen.name,
-                          style: AppTypography.h4,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                      Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          color: AppColors.surfaceVariant,
-                          shape: BoxShape.circle,
-                        ),
-                        child: Icon(
-                          Icons.arrow_forward_ios,
-                          size: 14,
-                          color: AppColors.textSecondary,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 6),
-                  Text(
-                    kitchen.description,
-                    style: AppTypography.bodyMedium,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  const SizedBox(height: AppSpacing.md),
-                  // category chips
-                  Row(
-                    children: [
-                      _buildCategoryChip(Icons.restaurant, 'Meals'),
-                      const SizedBox(width: AppSpacing.sm),
-                      _buildCategoryChip(Icons.fastfood, 'Snacks'),
-                      const Spacer(),
-                      // pickup locations count
-                      if (kitchen.pickupLocations.isNotEmpty)
-                        Row(
-                          children: [
-                            Icon(
-                              Icons.location_on,
-                              size: 14,
-                              color: AppColors.textHint,
-                            ),
-                            const SizedBox(width: 4),
-                            Text(
-                              '${kitchen.pickupLocations.length} pickup spots',
-                              style: AppTypography.caption,
-                            ),
-                          ],
-                        ),
-                    ],
-                  ),
+    child: Container(
+      margin: const EdgeInsets.only(bottom: AppSpacing.md),
+      decoration: AppDecorations.cardElevated,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // kitchen banner with gradient
+          Container(
+            height: 100,
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [
+                  AppColors.primary.withValues(alpha: 0.9),
+                  AppColors.primaryLight.withValues(alpha: 0.7),
                 ],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              borderRadius: const BorderRadius.vertical(
+                top: Radius.circular(AppRadius.lg),
               ),
             ),
-          ],
-        ),
+            child: Stack(
+              children: [
+                // background pattern
+                Positioned.fill(
+                  child: Opacity(
+                    opacity: 0.1,
+                    child: Icon(
+                      Icons.restaurant_menu,
+                      size: 150,
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
+                // status badge
+                Positioned(
+                  top: AppSpacing.sm,
+                  right: AppSpacing.sm,
+                  child: StatusBadge(
+                    status: kitchen.isActive ? 'open' : 'closed',
+                  ),
+                ),
+                // kitchen icon
+                Positioned(
+                  bottom: -20,
+                  left: AppSpacing.md,
+                  child: Container(
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: AppRadius.mediumRadius,
+                      boxShadow: AppShadows.medium,
+                    ),
+                    child: const Icon(
+                      Icons.store_rounded,
+                      color: AppColors.primary,
+                      size: 28,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          // kitchen info
+          Padding(
+            padding: const EdgeInsets.fromLTRB(
+              AppSpacing.md,
+              AppSpacing.lg + 8,
+              AppSpacing.md,
+              AppSpacing.md,
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        kitchen.name,
+                        style: AppTypography.h4,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: AppColors.surfaceVariant,
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(
+                        Icons.arrow_forward_ios,
+                        size: 14,
+                        color: AppColors.textSecondary,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  kitchen.description,
+                  style: AppTypography.bodyMedium,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: AppSpacing.md),
+                Row(
+                  children: [
+                    _buildCategoryChip(Icons.restaurant, 'Meals'),
+                    const SizedBox(width: AppSpacing.sm),
+                    _buildCategoryChip(Icons.fastfood, 'Snacks'),
+                    const Spacer(),
+                    if (kitchen.pickupLocations.isNotEmpty)
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.location_on,
+                            size: 14,
+                            color: AppColors.textHint,
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            '${kitchen.pickupLocations.length} pickup spots',
+                            style: AppTypography.caption,
+                          ),
+                        ],
+                      ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
-    );
-  }
+    ),
+  );
+}
 
   Widget _buildCategoryChip(IconData icon, String label) {
     return Container(
